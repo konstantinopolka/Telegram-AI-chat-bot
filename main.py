@@ -37,6 +37,5 @@ async def telegram_webhook(request: Request):
 
 
 
-
 BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 print(BOT_TOKEN)
