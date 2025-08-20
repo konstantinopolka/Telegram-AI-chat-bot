@@ -1,4 +1,0 @@
-fastapi
-pyTelegramBotAPI==4.26.0
-aiohttp==3.11.18
-python-dotenv
