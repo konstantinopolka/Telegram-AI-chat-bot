@@ -16,34 +16,44 @@ if not TOKEN:
     logger.error("TELEGRAM_TOKEN not found in environment variables")
     raise ValueError("TELEGRAM_TOKEN is required")
 
-# Create the bot instance with detailed logging
+# Create the bot instance
 bot = AsyncTeleBot(TOKEN)
 
-# Add middleware to log all incoming updates
-@bot.middleware_handler(update_types=['message'])
-async def log_incoming_messages(bot_instance, message):
-    """Log all incoming messages in detail"""
-    update_data = {
-        'message_id': message.message_id,
-        'from': {
-            'id': message.from_user.id,
-            'is_bot': message.from_user.is_bot,
-            'first_name': message.from_user.first_name,
-            'username': getattr(message.from_user, 'username', None),
-            'language_code': getattr(message.from_user, 'language_code', None)
-        },
-        'chat': {
-            'id': message.chat.id,
-            'first_name': getattr(message.chat, 'first_name', None),
-            'username': getattr(message.chat, 'username', None),
-            'type': message.chat.type
-        },
-        'date': message.date,
-        'text': getattr(message, 'text', None),
-        'content_type': message.content_type
-    }
+# Create a custom logging wrapper for message handlers
+def logged_message_handler(**kwargs):
+    """Decorator that adds logging to message handlers"""
+    def decorator(handler_func):
+        async def wrapper(message):
+            # Log incoming message
+            update_data = {
+                'message_id': message.message_id,
+                'from': {
+                    'id': message.from_user.id,
+                    'is_bot': message.from_user.is_bot,
+                    'first_name': message.from_user.first_name,
+                    'username': getattr(message.from_user, 'username', None),
+                    'language_code': getattr(message.from_user, 'language_code', None)
+                },
+                'chat': {
+                    'id': message.chat.id,
+                    'first_name': getattr(message.chat, 'first_name', None),
+                    'username': getattr(message.chat, 'username', None),
+                    'type': message.chat.type
+                },
+                'date': message.date,
+                'text': getattr(message, 'text', None),
+                'content_type': message.content_type
+            }
+            
+            logger.info(f"Received update: {json.dumps(update_data, ensure_ascii=False, indent=2)}")
+            
+            # Call the original handler
+            return await handler_func(message)
+        
+        # Register the wrapper with the bot
+        return bot.message_handler(**kwargs)(wrapper)
     
-    logger.info(f"Received update: {json.dumps(update_data, ensure_ascii=False, indent=2)}")
+    return decorator
 
 # Override the reply_to method to log outgoing messages
 original_reply_to = bot.reply_to

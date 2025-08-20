@@ -1,9 +1,9 @@
 import logging
-from src.bot_instance import bot
+from src.bot_instance import bot, logged_message_handler
 
 logger = logging.getLogger(__name__)
 
-@bot.message_handler(commands=['rules'])
+@logged_message_handler(commands=['rules'])
 async def send_rules(message):
     try:
         logger.info(f"Processing rules command from user {message.from_user.id}")

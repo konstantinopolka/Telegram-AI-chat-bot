@@ -1,9 +1,9 @@
 import logging
-from src.bot_instance import bot
+from src.bot_instance import bot, logged_message_handler
 
 logger = logging.getLogger(__name__)
 
-@bot.message_handler(func=lambda message: True)
+@logged_message_handler(func=lambda message: True)
 async def echo_message(message):
     try:
         if message.text:  # Only handle text messages

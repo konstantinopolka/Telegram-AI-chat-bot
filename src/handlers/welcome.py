@@ -1,9 +1,9 @@
 import logging
-from src.bot_instance import bot
+from src.bot_instance import bot, logged_message_handler
 
 logger = logging.getLogger(__name__)
 
-@bot.message_handler(commands=['help', 'start'])
+@logged_message_handler(commands=['help', 'start'])
 async def send_welcome(message):
     try:
         logger.info(f"Processing welcome command from user {message.from_user.id}")
