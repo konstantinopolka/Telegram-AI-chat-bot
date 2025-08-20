@@ -79,3 +79,7 @@ Desktop.ini
 # Temporary files
 *.tmp
 *.bak
+
+
+/.ropeproject
+*/__pycache__

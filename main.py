@@ -3,29 +3,44 @@
 # This is a simple echo bot using the decorator mechanism.
 # It echoes any incoming text messages.
 import asyncio
+import logging
+import sys
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('bot.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
-TOKEN = os.getenv("TELEGRAM_TOKEN")
+# Import bot instance
+from src.bot_instance import bot
 
-from telebot.async_telebot import AsyncTeleBot
+# Import handlers to register them (this registers the decorators)
+from src.handlers import welcome, message, rules
 
-bot = AsyncTeleBot(TOKEN)
+async def main():
+    """Main function with proper exception handling"""
+    try:
+        logger.info("Starting bot...")
+        await bot.polling(none_stop=True)
+    except Exception as e:
+        logger.error(f"Critical error in bot polling: {e}", exc_info=True)
+        raise
+    finally:
+        logger.info("Bot stopped")
 
-
-# Handle '/start' and '/help'
-@bot.message_handler(commands=['help', 'start'])
-async def send_welcome(message):
-    text = 'Hi, I am EchoBot.\nJust write me something and I will repeat it!'
-    await bot.reply_to(message, text)
-
-
-# Handle all other messages with content_type 'text' (content_types defaults to ['text'])
-@bot.message_handler(func=lambda message: True)
-async def echo_message(message):
-    await bot.reply_to(message, message.text)
-
-
-asyncio.run(bot.polling())
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}", exc_info=True)
+        sys.exit(1)
