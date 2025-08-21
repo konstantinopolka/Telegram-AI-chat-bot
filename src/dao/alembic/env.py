@@ -1,10 +1,16 @@
 from logging.config import fileConfig
+import sys
+from pathlib import Path
 
 from alembic import context
 
-from src.dao.models import Base, engine
-import os
-from dotenv import load_dotenv
+# Add the project root to Python path so we can import our models
+project_root = Path(__file__).parent.parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+# Import after adding to path - import both Base and your engine
+# No need for load_dotenv() here since models.py already does it
+from src.dao.models import Base, engine, DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -17,14 +23,10 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# Set the database URL dynamically from your models.py
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 
 def run_migrations_offline() -> None:
@@ -39,11 +41,9 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    load_dotenv()
-    REPOSTING_BOT_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///dev.db")
-    url = REPOSTING_BOT_DATABASE_URL
-    print(url)
-    
+    # Use DATABASE_URL directly instead of going through config
+    # (though config.get_main_option("sqlalchemy.url") would be the same value)
+    url = DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -62,6 +62,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Use your engine from models.py instead of creating a new one
     connectable = engine
 
     with connectable.connect() as connection:

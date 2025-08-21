@@ -22,9 +22,9 @@ class User(Base):
         return f"<User(id={self.telegram_id}, username={self.username})>"
     
 load_dotenv()
-REPOSTING_BOT_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///dev.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///dev.db")
     
-engine = create_engine(REPOSTING_BOT_DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL, echo=True)
 # Base.metadata.create_all(engine)
 
 
