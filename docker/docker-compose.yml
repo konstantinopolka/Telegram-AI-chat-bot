@@ -12,6 +12,7 @@ services:
       dockerfile: docker/Dockerfile
     volumes:
       - ../dev.db:/app/dev.db
+      - ../bot.log:/app/bot.log
     env_file:
       - ../.env
     depends_on:
