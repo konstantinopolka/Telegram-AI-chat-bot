@@ -68,14 +68,21 @@ Desktop.ini
 # Env config
 .env
 .env.*
+*.env
+
 
 # Logs
 *.log
 
 # SQLite database files
 *.sqlite3
-*.db
+ *.db
 
 # Temporary files
 *.tmp
 *.bak
+
+
+/.ropeproject
+*/__pycache__
+

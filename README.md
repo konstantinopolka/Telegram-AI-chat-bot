@@ -1,0 +1,199 @@
+# Telegram Echo Bot (AsyncTeleBot)
+
+This is a simple Telegram bot built with **pyTelegramBotAPI (telebot)** using async polling that echoes back any message sent by the user with detailed logging.
+
+## Features
+
+* Receives messages from Telegram using **polling** (no webhook required)
+* Responds to `/start` and `/help` commands with a welcome message
+* Responds to `/rules` command with bot rules
+* Echoes back any other text message with "You said: [message]"
+* **Comprehensive logging** - logs all incoming updates and outgoing responses in JSON format
+* **Exception handling** - graceful error handling with fallback messages
+* **Modular structure** - handlers separated into different files
+
+## Project Structure
+
+```
+Bot/
+├── main.py                     # Entry point
+├── src/
+│   ├── __init__.py
+│   ├── bot_instance.py         # Bot instance with logging middleware
+│   └── handlers/
+│       ├── __init__.py
+│       ├── welcome.py          # /start and /help commands
+│       ├── rules.py            # /rules command
+│       └── message.py          # Echo handler (catch-all)
+├── requirements.txt
+├── .env                        # Environment variables
+├── bot.log                     # Log file (created when running)
+└── README.md
+```
+
+## Requirements
+
+* Python 3.8+
+* A Telegram bot token from [BotFather](https://t.me/BotFather)
+
+## Installation
+
+1. Clone this repository
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Create a `.env` file in the project root:
+   ```env
+   TELEGRAM_TOKEN=your_telegram_bot_token_here
+   ```
+
+## Usage
+
+### Running the Bot
+
+```bash
+python main.py
+```
+
+The bot will:
+- Start polling for messages
+- Log all activity to both console and `bot.log` file
+- Show detailed JSON logs of incoming updates and outgoing responses
+
+### Example Logs
+
+When you send a message, you'll see detailed logs like:
+
+```
+2025-08-20 10:46:34,123 - src.bot_instance - INFO - Received update: {
+  "message_id": 36,
+  "from": {
+    "id": 674318335,
+    "is_bot": false,
+    "first_name": "Kostiantyn",
+    "username": "kostyer",
+    "language_code": "de"
+  },
+  "chat": {
+    "id": 674318335,
+    "first_name": "Kostiantyn",
+    "username": "kostyer",
+    "type": "private"
+  },
+  "date": 1755679594,
+  "text": "what",
+  "content_type": "text"
+}
+
+2025-08-20 10:46:34,456 - src.bot_instance - INFO - Sent: {
+  "ok": true,
+  "result": {
+    "message_id": 37,
+    "from": {
+      "id": 7903107764,
+      "is_bot": true,
+      "first_name": "Arsen Markarjan",
+      "username": "Markarjan_bot"
+    },
+    "chat": {
+      "id": 674318335,
+      "first_name": "Kostiantyn",
+      "username": "kostyer",
+      "type": "private"
+    },
+    "date": 1755679594,
+    "text": "You said: what"
+  }
+}
+```
+
+## Available Commands
+
+* `/start` or `/help` - Shows welcome message
+* `/rules` - Shows bot rules
+* Any other text - Echoes back with "You said: [your message]"
+
+## Features Explained
+
+### Polling vs Webhooks
+
+This bot uses **polling** instead of webhooks:
+- **Polling**: Bot asks Telegram "any new messages?" every few seconds
+- **Webhooks**: Telegram sends messages to your server URL
+- **Advantage of polling**: No need for public server, works locally
+- **Disadvantage**: Slightly higher latency
+
+### Detailed Logging
+
+The bot includes comprehensive logging:
+- **Incoming updates**: Full JSON of received messages
+- **Outgoing responses**: Full JSON of sent messages  
+- **Error handling**: Stack traces for debugging
+- **Process flow**: Handler execution logs
+
+### Modular Architecture
+
+Handlers are separated for maintainability:
+- `welcome.py`: Handles `/start` and `/help` commands
+- `rules.py`: Handles `/rules` command
+- `message.py`: Catch-all handler for other messages
+- `bot_instance.py`: Centralized bot instance with logging middleware
+
+## Development
+
+### Adding New Handlers
+
+1. Create a new file in `src/handlers/`
+2. Import the bot instance: `from src.bot_instance import bot`
+3. Add your handler with decorator: `@bot.message_handler(...)`
+4. Import the handler in `main.py`
+
+Example:
+```python
+# src/handlers/weather.py
+from src.bot_instance import bot
+
+@bot.message_handler(commands=['weather'])
+async def weather_command(message):
+    await bot.reply_to(message, "Today is sunny! ☀️")
+```
+
+### Log Levels
+
+You can adjust logging level in `main.py`:
+- `logging.DEBUG`: Very verbose
+- `logging.INFO`: Default (recommended)
+- `logging.WARNING`: Only warnings and errors
+- `logging.ERROR`: Only errors
+
+## Example Interaction
+
+**User:** `/start`  
+**Bot:** Hi, I am ServeBot. Just write me something and I will repeat it!
+
+**User:** Hello world!  
+**Bot:** You said: Hello world!
+
+**User:** `/rules`  
+**Bot:** Bot rules:
+1. Be respectful
+2. No spam  
+3. Have fun!
+
+## Troubleshooting
+
+### Bot doesn't respond
+- Check if `TELEGRAM_TOKEN` is set correctly in `.env`
+- Look at console/log output for error messages
+- Ensure no webhook is set (this bot uses polling)
+
+### To delete webhook (if needed):
+```bash
+curl -X POST "https://api.telegram.org/bot<YOUR_TOKEN>/deleteWebhook"
+```
+
+---
+
+**Note:** Keep your `.env` file and bot token secure. Never commit them to version control.

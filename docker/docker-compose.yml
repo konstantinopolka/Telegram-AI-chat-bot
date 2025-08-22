@@ -1,0 +1,27 @@
+services:
+  database: 
+    image: postgres:17 
+    container_name: reposting_bot_database
+    volumes:
+      - ../docker-data/postgres:/var/lib/postgresql/data
+    env_file:
+      - database.env
+  bot:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ../dev.db:/app/dev.db
+      - ../bot.log:/app/bot.log
+    env_file:
+      - ../.env
+    depends_on:
+      - database
+    restart: unless-stopped
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=youruser
+      - DB_PASSWORD=yourpassword
+      - DB_NAME=yourdb
+      
