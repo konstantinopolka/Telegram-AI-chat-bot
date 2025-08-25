@@ -7,6 +7,7 @@ import logging
 import sys
 from dotenv import load_dotenv
 import os
+from src.bot_handler.bot_handler import BotHandler
 
 # Configure logging
 logging.basicConfig(
@@ -19,17 +20,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Import bot instance
-from src.bot_instance import bot
-
-# Import handlers to register them (this registers the decorators)
-from src.handlers import welcome, message, rules
-
 async def main():
     """Main function with proper exception handling"""
     try:
         logger.info("Starting bot...")
-        await bot.polling(none_stop=True)
+        bot_handler = BotHandler()
+        await bot_handler.start_polling()
+        
     except Exception as e:
         logger.error(f"Critical error in bot polling: {e}", exc_info=True)
         raise

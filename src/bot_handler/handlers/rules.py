@@ -1,5 +1,5 @@
 import logging
-from src.bot_instance import bot, logged_message_handler
+from src.bot_handler.bot_instance import bot, logged_message_handler
 
 logger = logging.getLogger(__name__)
 
