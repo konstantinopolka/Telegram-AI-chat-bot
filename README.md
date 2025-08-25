@@ -19,12 +19,19 @@ Bot/
 ├── main.py                     # Entry point
 ├── src/
 │   ├── __init__.py
+│   ├── version.py              # Version information module
 │   ├── bot_instance.py         # Bot instance with logging middleware
 │   └── handlers/
 │       ├── __init__.py
 │       ├── welcome.py          # /start and /help commands
 │       ├── rules.py            # /rules command
 │       └── message.py          # Echo handler (catch-all)
+├── docker/                     # Docker deployment with versioning
+│   ├── Dockerfile              # Multi-stage build
+│   ├── docker-compose.yml      # Services definition
+│   ├── build.sh               # Automated build script
+│   ├── deploy.sh              # Registry deployment
+│   └── readme.md              # Docker documentation
 ├── requirements.txt
 ├── .env                        # Environment variables
 ├── bot.log                     # Log file (created when running)
@@ -53,9 +60,19 @@ Bot/
 
 ### Running the Bot
 
+**Local Development:**
 ```bash
 python main.py
 ```
+
+**Docker (Production):**
+```bash
+cd docker
+./build.sh           # Build with versioning
+docker-compose --env-file .env.docker up -d
+```
+
+For detailed Docker setup and versioning system, see [`docker/readme.md`](docker/readme.md).
 
 The bot will:
 - Start polling for messages

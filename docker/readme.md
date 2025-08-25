@@ -1,95 +1,305 @@
-# Bot Project: Docker & Docker Compose Guide
+# Bot Project: Docker & Versioning Guide
 
 ## Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 - [Docker Compose](https://docs.docker.com/compose/) (included with Docker Desktop)
+- Git (for automatic versioning)
 - WSL2 integration enabled (if using Windows)
 
 ## Project Structure
 
 ```
 /
-├── src/                # Bot source code
-├── requirements/       # Python requirements files
-├── main.py             # Bot entry point
+├── src/                    # Bot source code
+│   └── version.py         # Version information module
+├── requirements/          # Python requirements files
+├── main.py               # Bot entry point
 ├── docker/
-│   ├── Dockerfile      # Dockerfile for bot
-│   ├── docker-compose.yml
-│   └── database.env    # Database environment variables
+│   ├── Dockerfile        # Multi-stage Dockerfile with versioning
+│   ├── docker-compose.yml # Compose with version support
+│   ├── database.env      # Database environment variables
+│   ├── .env.docker       # Docker versioning configuration
+│   ├── build.sh          # Automated build script with versioning
+│   ├── deploy.sh         # Deployment script with registry push
+│   └── readme.md         # This file
 ```
+
+## Docker Versioning System
+
+This project implements a comprehensive Docker versioning system similar to database migrations (Alembic) and source control (Git). It provides:
+
+- **Semantic versioning** for Docker images
+- **Build metadata** (date, git commit) embedded in images
+- **Automated tagging** based on git tags/commits
+- **Container naming** with version information
+- **Version tracking** in the running application
+
+### Version Information Sources
+
+1. **Git tags**: `git describe --tags --always`
+2. **Git commits**: Short commit hash
+3. **Build date**: ISO 8601 timestamp
+4. **Manual override**: Pass version as parameter
 
 ## Quick Start
 
-1. **Configure Environment Variables**
+### 1. Configure Environment Variables
 
-   - Edit `docker/database.env` for database credentials.
-   - Create a `.env` file in `docker/` for bot-specific environment variables (if needed).
+Edit environment files:
+- `docker/database.env` - Database credentials
+- `docker/.env.docker` - Docker versioning settings
+- Root `.env` - Bot-specific environment variables
 
-2. **Build and Start Services**
+### 2. Build with Versioning
 
-   Open a terminal in the `docker/` directory and run:
+**Automatic versioning (recommended):**
+```sh
+cd docker
+./build.sh
+```
 
-   ```sh
-   docker-compose up --build -d
-   ```
+**Manual version:**
+```sh
+cd docker
+./build.sh 1.2.3
+```
 
-   This will:
-   - Build the bot image
-   - Start the PostgreSQL database and bot containers in the background
+**Traditional build (no versioning):**
+```sh
+docker-compose up --build -d
+```
 
-3. **Check Running Containers**
+### 3. Start Services with Versioning
 
-   ```sh
-   docker-compose ps
-   ```
+**Option A: Use the build script (recommended):**
+```sh
+cd docker
+./build.sh                    # This generates .env.docker automatically
+docker-compose --env-file .env.docker up -d
+```
 
-4. **View Logs**
+**Option B: Manual environment generation:**
+```sh
+cd docker
+./generate-env.sh             # Generate .env.docker with current git info
+docker-compose --env-file .env.docker up -d
+```
 
-   ```sh
-   docker-compose logs bot
-   ```
+**Option C: Use specific version:**
+```sh
+cd docker
+./generate-env.sh 1.2.3       # Generate .env.docker with specific version
+docker-compose --env-file .env.docker up -d
+```
 
-5. **Stop Services**
+### 4. Check Version Information
 
-   ```sh
-   docker-compose down
-   ```
+**Running containers:**
+```sh
+docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+```
 
-## Development Tips
+**Image metadata:**
+```sh
+docker inspect reposting_bot:latest | grep -A 10 Labels
+```
 
-- For SQLite development, mount your `dev.db` file in `docker-compose.yml` under the `bot` service.
-- To rebuild the bot image after code changes, use:
-  ```sh
-  docker-compose up --build bot
-  ```
+**In application** (if version.py is imported):
+```python
+from src.version import get_version_info
+print(get_version_info())  # Version: 1.2.3-a1b2c3d, Build: 2024-01-01T12:00:00Z, Commit: a1b2c3d
+```
+
+## Versioning Workflow
+
+### Development Workflow
+1. Make code changes
+2. Commit changes: `git commit -m "feature: add new functionality"`
+3. Build: `./build.sh` (uses commit hash as version)
+4. Test: `docker-compose --env-file .env.docker up -d`
+
+### Release Workflow
+1. Create git tag: `git tag v1.2.3`
+2. Build: `./build.sh` (uses tag as version)
+3. Deploy: `./deploy.sh` (pushes to registry)
+
+### Hotfix Workflow
+1. Create hotfix branch from tag
+2. Apply fix and commit
+3. Create new tag: `git tag v1.2.4`
+4. Build and deploy: `./build.sh && ./deploy.sh`
+
+## Scripts Reference
+
+### build.sh
+Builds Docker images with versioning support.
+
+**Usage:**
+```sh
+./build.sh [VERSION]
+```
+
+**Examples:**
+```sh
+./build.sh              # Auto-version from git
+./build.sh 1.2.3        # Manual version
+./build.sh hotfix-001    # Custom tag
+```
+
+**What it does:**
+- Detects version from git or uses provided version
+- Sets build arguments (version, date, commit)
+- Builds image with docker-compose
+- Tags multiple versions (specific, latest)
+- Shows build summary
+
+### generate-env.sh
+Generates the `.env.docker` file with actual resolved values.
+
+**Usage:**
+```sh
+./generate-env.sh [VERSION]
+```
+
+**Examples:**
+```sh
+./generate-env.sh           # Auto-version from git
+./generate-env.sh 1.2.3     # Manual version
+```
+
+**What it does:**
+- Resolves git commit hash and build date
+- Creates `.env.docker` with actual values (no shell commands)
+- Ensures Docker Compose compatibility
+Deploys to Docker registry with versioning.
+
+**Usage:**
+```sh
+./deploy.sh [VERSION]
+```
+
+**Environment variables:**
+- `DOCKER_REGISTRY`: Registry URL (default: "your-registry.com")
+
+**What it does:**
+- Calls build.sh with version
+- Tags for registry
+- Pushes versioned and latest tags
+
+## Environment Files
+
+### .env.docker
+Docker-specific versioning configuration (generated by `generate-env.sh`):
+```bash
+# Docker Image Versioning (Generated on Mon Aug 25 21:55:30 CEST 2025)
+APP_VERSION=1c2127c
+BUILD_DATE=2025-08-25T19:55:30Z
+GIT_COMMIT=1c2127c
+POSTGRES_VERSION=17
+```
+
+**Note:** This file should be generated using `./generate-env.sh` rather than edited manually, as it contains resolved values that Docker Compose can use directly.
+
+### database.env
+Database configuration (unchanged):
+```bash
+POSTGRES_DB=yourdb
+POSTGRES_USER=youruser
+POSTGRES_PASSWORD=yourpassword
+```
+
+## Version Management Commands
+
+### List all image versions:
+```sh
+docker images | grep reposting_bot
+```
+
+### Run specific version:
+```sh
+docker run reposting_bot:1.2.3
+```
+
+### Rollback to previous version:
+```sh
+docker-compose down
+docker tag reposting_bot:1.2.2 reposting_bot:latest
+docker-compose --env-file .env.docker up -d
+```
+
+### Clean old versions:
+```sh
+docker image prune -f
+docker images | grep reposting_bot | grep -v latest | awk '{print $3}' | xargs docker rmi
+```
+
+## Advanced Usage
+
+### Registry Integration
+Set up environment for automated deployments:
+```sh
+export DOCKER_REGISTRY="your-registry.azurecr.io"
+./deploy.sh 1.2.3
+```
+
+### CI/CD Integration
+Example GitHub Actions workflow:
+```yaml
+- name: Build and Deploy
+  run: |
+    cd docker
+    ./build.sh ${{ github.ref_name }}
+    ./deploy.sh ${{ github.ref_name }}
+```
+
+### Health Checks with Version
+Add to docker-compose.yml:
+```yaml
+healthcheck:
+  test: ["CMD", "python", "-c", "from src.version import get_version_info; print(get_version_info())"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+```
 
 ## Troubleshooting
 
-- **Permission denied errors:**  
-  Add your user to the Docker group and restart your terminal:
-  ```sh
-  sudo usermod -aG docker $USER
-  ```
+### Version Issues
+- **"unknown" version**: Check git repository status, ensure you're in a git repo
+- **Build fails**: Check git is installed and accessible in build environment
+- **Wrong version displayed**: Verify environment variables are passed correctly
+- **"invalid reference format"**: Run `./generate-env.sh` to create proper .env.docker file
 
-- **Docker not detected in VS Code:**  
-  Make sure Docker Desktop is running and WSL2 integration is enabled.
+### Docker Issues
+- **Permission denied**: Add user to docker group: `sudo usermod -aG docker $USER`
+- **Build context errors**: Ensure build is run from docker/ directory
+- **Registry push fails**: Check registry credentials and permissions
+- **Environment variable issues**: Ensure .env.docker contains actual values, not shell commands
 
-## Useful Commands
+### Common Commands
+```sh
+# Force rebuild without cache
+./build.sh --no-cache
 
-- Build images:  
-  ```sh
-  docker-compose build
-  ```
-- Restart services:  
-  ```sh
-  docker-compose restart
-  ```
-- Remove all containers and volumes:  
-  ```sh
-  docker-compose down -v
-  ```
+# View detailed build log
+docker-compose build --progress=plain
+
+# Debug version info
+docker run --rm reposting_bot:latest python -c "from src.version import get_version_info; print(get_version_info())"
+```
+
+## Migration from Non-Versioned Setup
+
+1. **Backup current setup**: `docker-compose down && docker images > backup_images.txt`
+2. **Update configuration**: Use new .env.docker file
+3. **Build with versioning**: `./build.sh 1.0.0`
+4. **Test new setup**: `docker-compose --env-file .env.docker up -d`
+5. **Clean old images**: Remove untagged images once stable
 
 ---
 
-**For more details, see the official [Docker Compose documentation](https://docs.docker.com/compose/).**
+**For more details, see:**
+- [Docker Compose documentation](https://docs.docker.com/compose/)
+- [Docker image best practices](https://docs.docker.com/develop/dev-best-practices/)
+- [Semantic Versioning](https://semver.org/)

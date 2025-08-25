@@ -1,0 +1,6 @@
+REPOSITORY    TAG       IMAGE ID       CREATED       SIZE
+docker-bot    latest    3fefba4be638   3 days ago    512MB
+<none>        <none>    516ac3214e0b   3 days ago    512MB
+postgres      17        ca95f67ffb26   11 days ago   454MB
+hello-world   latest    1b44b5a3e06a   2 weeks ago   10.1kB
+ubuntu        latest    e0f16e6366fe   3 weeks ago   78.1MB
