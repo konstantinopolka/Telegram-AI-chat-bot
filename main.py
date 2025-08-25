@@ -7,7 +7,7 @@ import logging
 import sys
 from dotenv import load_dotenv
 import os
-from src.bot_handler.bot_handler import BotHandler
+from src.bot_handler import BotHandler
 
 # Configure logging
 logging.basicConfig(
