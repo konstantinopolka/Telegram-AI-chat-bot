@@ -1,0 +1,101 @@
+import os
+import logging
+import json
+from dotenv import load_dotenv
+from telebot.async_telebot import AsyncTeleBot
+from src.handler_registry import HandlerRegistry
+
+"""
+Bot handler class with object-oriented design
+"""
+
+
+class BotHandler:
+    
+    def __init__(self):
+        load_dotenv()
+        self.logger = logging.getLogger(__name__)
+        
+        TOKEN = os.getenv("TELEGRAM_TOKEN")
+        if not TOKEN:
+            self.logger.error("TELEGRAM_TOKEN not found in environment variables")
+            raise ValueError("TELEGRAM_TOKEN is required")
+
+        # Create the bot instance
+        self.bot = AsyncTeleBot(TOKEN)
+        
+        # Setup logging for the bot
+        self._setup_bot_logging()
+        
+        # Register all handlers
+        self._register_handlers()
+        
+        self.logger.info("BotHandler initialized successfully")
+    
+    def _setup_bot_logging(self):
+        """Setup logging wrapper for bot messages"""
+        # Store the original reply_to method
+        original_reply_to = self.bot.reply_to
+
+        async def logged_reply_to(message, text, **kwargs):
+            """Wrapper for reply_to that logs the response"""
+            try:
+                result = await original_reply_to(message, text, **kwargs)
+                
+                if hasattr(result, 'message_id'):
+                    response_data = {
+                        'ok': True,
+                        'result': {
+                            'message_id': result.message_id,
+                            'from': {
+                                'id': result.from_user.id,
+                                'is_bot': result.from_user.is_bot,
+                                'first_name': result.from_user.first_name,
+                                'username': getattr(result.from_user, 'username', None)
+                            },
+                            'chat': {
+                                'id': result.chat.id,
+                                'first_name': getattr(result.chat, 'first_name', None),
+                                'username': getattr(result.chat, 'username', None),
+                                'type': result.chat.type
+                            },
+                            'date': result.date,
+                            'text': result.text
+                        }
+                    }
+                    self.logger.info(f"Sent: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
+                
+                return result
+            except Exception as e:
+                self.logger.error(f"Failed to send message: {e}")
+                raise
+
+        # Replace the bot's reply_to method with our logged version
+        self.bot.reply_to = logged_reply_to
+    
+    def _register_handlers(self):
+        """Register all message handlers using HandlerRegistry"""
+        # Create the handler registry - it will automatically register all handlers
+        self.handler_registry = HandlerRegistry(self.bot, self.logger)
+    
+    async def start_polling(self):
+        """Start the bot polling"""
+        await self.bot.polling(none_stop=True)
+        
+    async def list_articles(self, user_id: int):
+        """
+        Show user list of all articles with read/unread status
+        """
+        pass
+
+    async def read_article(self, user_id: int, article_id: int):
+        """
+        Show content of a single article, resume from last read position
+        """
+        pass
+
+    async def mark_progress(self, user_id: int, article_id: int, position: int):
+        """
+        Save progress for user in the DB
+        """
+        pass

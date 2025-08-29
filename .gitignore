@@ -86,3 +86,4 @@ Desktop.ini
 /.ropeproject
 */__pycache__
 
+docker-data/

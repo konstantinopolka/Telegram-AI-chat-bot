@@ -1,16 +1,21 @@
 services:
   database: 
-    image: postgres:17 
-    container_name: reposting_bot_database
+    image: postgres:${POSTGRES_VERSION:-17}
+    container_name: reposting_bot_database_${APP_VERSION:-latest}
     volumes:
       - ../docker-data/postgres:/var/lib/postgresql/data
     env_file:
       - database.env
   bot:
-    container_name: reposting_bot
+    container_name: reposting_bot_${APP_VERSION:-latest}
     build:
       context: ../
       dockerfile: docker/Dockerfile
+      args:
+        - APP_VERSION=${APP_VERSION:-latest}
+        - BUILD_DATE=${BUILD_DATE:-unknown}
+        - GIT_COMMIT=${GIT_COMMIT:-unknown}
+    image: reposting_bot:${APP_VERSION:-latest}
     volumes:
       - ../dev.db:/app/dev.db
       - ../bot.log:/app/bot.log
@@ -25,4 +30,7 @@ services:
       - DB_USER=youruser
       - DB_PASSWORD=yourpassword
       - DB_NAME=yourdb
+      - APP_VERSION=${APP_VERSION:-latest}
+      - BUILD_DATE=${BUILD_DATE:-unknown}
+      - GIT_COMMIT=${GIT_COMMIT:-unknown}
       
