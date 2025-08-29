@@ -1,6 +1,7 @@
 import logging
 import json
-from src.dao.models import User, AsyncSessionLocal
+from src.dao.models import User
+from src.dao import AsyncSessionLocal
 
 
 class HandlerRegistry:

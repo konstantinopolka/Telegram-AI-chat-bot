@@ -3,3 +3,6 @@ aiohttp==3.11.18
 python-dotenv
 sqlalchemy==2.0.41
 alembic==1.16.2
+bs4=4.13.5 
+requests=0.0.2
+pydantic

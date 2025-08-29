@@ -10,7 +10,7 @@ sys.path.insert(0, str(project_root))
 
 # Import after adding to path - import both Base and your engine
 # No need for load_dotenv() here since models.py already does it
-from src.dao.models import Base, engine, DATABASE_URL
+from src.dao.database_instance import Base, engine, DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
