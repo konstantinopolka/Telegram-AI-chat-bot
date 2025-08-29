@@ -91,7 +91,8 @@ class HandlerRegistry:
                         await self.bot.reply_to(message, "Welcome, you have been registered!")
                         self.logger.info("New user registered and welcomed.")
                     else:
-                        await self.bot.reply_to(message, f"Welcome back, {message.from_user.username}")
+                        username = message.from_user.username or message.from_user.first_name or "User"
+                        await self.bot.reply_to(message, f"Welcome back, {username}")
                         self.logger.info("Returning user welcomed.")
             except Exception as e:
                 self.logger.error(f"Error in send_welcome: {e}", exc_info=True)

@@ -2,7 +2,6 @@
 Version and build information module.
 """
 import os
-from datetime import datetime
 
 class BuildInfo:
     """Container for build and version information."""
