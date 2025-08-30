@@ -43,19 +43,9 @@ class ReviewFetcher(Fetcher):
                 self.handle_request_error(e, url)
         return results
     
-    def get_listing_urls(self) -> List[str]:
-        """Get article URLs from review listing page"""
-        html = self.fetch_page(self.base_url)
-        return self.parser.parse_listing_page(html)
+
     
-    def get_content_data(self, url: str) -> Optional[Dict[str, Any]]:
-        """Complete workflow: fetch article and parse its content"""
-        try:
-            html = self.fetch_page(url)
-            return self.parser.parse_content_page(html, url)
-        except Exception as e:
-            self.handle_request_error(e, url)
-            return None
+
     
     def handle_request_error(self, error: Exception, url: str) -> None:
         """Custom error handling for review fetching"""
