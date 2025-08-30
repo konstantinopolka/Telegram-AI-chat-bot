@@ -19,5 +19,4 @@ class Article(Base):
     
     def __repr__(self):
         return f"<Article(id={self.id}, title='{self.title}', review_id={self.review_id})>"
-
-
+    
