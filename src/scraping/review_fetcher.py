@@ -1,9 +1,7 @@
 from typing import List, Optional, Dict, Any
 
 import requests
-from bs4 import BeautifulSoup
-from src.review_parser import ReviewParser
-from src.fetcher import Fetcher
+from src.scraping.fetcher import Fetcher
 
 from telegraph import Telegraph
 import json
@@ -13,7 +11,6 @@ import os
 class ReviewFetcher(Fetcher):
     def __init__(self, base_url: str):
         self.base_url = base_url
-        self.parser = ReviewParser(base_url)
         self.session = requests.Session()  # Reuse connections
         
     # ===============================

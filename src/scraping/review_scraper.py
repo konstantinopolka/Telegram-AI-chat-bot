@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
-from src.scraper import Scraper
-from src.review_fetcher import ReviewFetcher
-from src.review_parser import ReviewParser
+from src.scraping.scraper import Scraper
+from src.scraping.review_fetcher import ReviewFetcher
+from src.scraping.review_parser import ReviewParser
 
 class ReviewScraper(Scraper):
     """

@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from src.review_scraper import ReviewScraper
+from src.scraping import ReviewScraper
 from src.telegraph_manager import TelegraphManager
 
 class RepostingOrchestrator:
