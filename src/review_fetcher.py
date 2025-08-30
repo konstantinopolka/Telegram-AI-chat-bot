@@ -3,14 +3,14 @@ from typing import List, Optional, Dict, Any
 import requests
 from bs4 import BeautifulSoup
 from src.review_parser import ReviewParser
-
+from src.fetcher import Fetcher
 
 from telegraph import Telegraph
 import json
 import os
 
 # ARTICLE_URL = 'https://platypus1917.org/2025/07/01/what-is-capitalism/'
-class ReviewFetcher:
+class ReviewFetcher(Fetcher):
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.parser = ReviewParser(base_url)
@@ -22,6 +22,9 @@ class ReviewFetcher:
 
     def fetch_page(self, url: str) -> str:
         """Fetch raw HTML content from a URL"""
+        if not self.validate_url(url):
+            raise ValueError(f"Invalid URL format: {url}")
+        
         response = self.session.get(url, timeout=10)
         response.raise_for_status()
         return response.text
@@ -30,6 +33,9 @@ class ReviewFetcher:
         """Fetch multiple pages and return URL -> HTML mapping"""
         results = {}
         for url in urls:
+            if not self.validate_url(url):
+                print(f"Skipping invalid URL: {url}")
+                continue
             try:
                 html = self.fetch_page(url)
                 results[url] = html
