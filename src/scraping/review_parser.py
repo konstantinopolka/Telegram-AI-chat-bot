@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from bs4 import BeautifulSoup
-from src.parser import Parser
+from src.scraping.parser import Parser
 
 class ReviewParser(Parser):
     def __init__(self, base_url: str):
