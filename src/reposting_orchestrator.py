@@ -10,6 +10,7 @@ class RepostingOrchestrator:
         """
         Full workflow:
         - fetch articles from review
+        - parse articles
         - create Telegraph articles
         - save metadata to DB
         - post to channel
