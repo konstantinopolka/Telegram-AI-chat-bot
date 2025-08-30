@@ -23,6 +23,7 @@ class ReviewParser(Parser):
     def parse_content_page(self, html: str, url: str) -> Dict[str, Any]:
         """Parse single article HTML to extract structured data"""
         soup = self.create_soup(html)
+        #TO-DO
         
         return {
             'title': self.extract_title(soup),
@@ -46,6 +47,8 @@ class ReviewParser(Parser):
         return self.clean_content_for_publishing(content_div)
     
     def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
+        #TO-DO
+        
         """Extract metadata from Platypus article"""
         metadata = {
             'authors': self._extract_authors(soup),
@@ -65,6 +68,7 @@ class ReviewParser(Parser):
         # Remove unwanted elements
         for unwanted in content_copy.select('nav, footer, .sidebar, script, style, .comments'):
             unwanted.decompose()
+        #TO-DO
         
         # Clean tags
         for tag in content_copy.find_all():
@@ -75,6 +79,8 @@ class ReviewParser(Parser):
     
     def _extract_authors(self, soup: BeautifulSoup) -> List[str]:
         """Extract authors from article"""
+        #TO-DO
+        
         authors = []
         byline = soup.select_one('.byline, .author, [class*="author"]')
         if byline:
@@ -86,6 +92,8 @@ class ReviewParser(Parser):
     
     def _extract_date(self, soup: BeautifulSoup) -> str:
         """Extract publication date"""
+        
+        #TO-DO
         date_elem = soup.select_one('time, .date, [class*="date"]')
         if date_elem:
             return date_elem.get('datetime') or self.clean_text(date_elem.get_text())
