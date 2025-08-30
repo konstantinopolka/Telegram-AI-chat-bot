@@ -44,9 +44,6 @@ class ReviewFetcher(Fetcher):
         return results
     
 
-    
-
-    
     def handle_request_error(self, error: Exception, url: str) -> None:
         """Custom error handling for review fetching"""
         print(f"Failed to fetch review from {url}: {error}")
@@ -55,10 +52,6 @@ class ReviewFetcher(Fetcher):
 
     
 
-# --- Scrape article ---
-response = requests.get(ARTICLE_URL)
-soup = BeautifulSoup(response.content, 'html.parser')
-
 title_tag = soup.find('h1')
 title = title_tag.get_text(strip=True) if title_tag else "Untitled"
 
@@ -66,47 +59,3 @@ content_div = soup.find('div', class_='dc-page-seo-wrapper')
 if not content_div:
     content_div = soup
 
-# Allowed tags
-allowed_tags = {'a', 'b', 'i', 'em', 'strong', 'u', 's', 'blockquote',
-                'code', 'pre', 'p', 'ul', 'ol', 'li', 'br', 'hr', 'img'}
-
-# Clean HTML: unwrap unallowed tags
-for tag in content_div.find_all():
-    if tag.name not in allowed_tags:
-        tag.unwrap()
-
-# --- Split content safely into chunks ---
-MAX_CHARS = 50000
-blocks = content_div.find_all(['p', 'ul', 'ol', 'blockquote', 'pre', 'img', 'hr', ])
-# print(blocks)
-chunks = []
-current_chunk = ""
-
-for block in blocks:
-    block_html = str(block)
-    # If adding this block exceeds the limit, start a new chunk
-    if len(current_chunk) + len(block_html) > MAX_CHARS:
-        chunks.append(current_chunk)
-        current_chunk = block_html
-    else:
-        current_chunk += block_html
-
-# Add the last chunk
-if current_chunk:
-    chunks.append(current_chunk)
-
-# --- Create Telegraph pages ---
-telegraph_urls = []
-for i, chunk in enumerate(chunks):
-    print(i)
-    print(chunk)
-    print(len(chunk))
-    page = telegraph.create_page(
-        title=title if i == 0 else f"{title} (part {i+1})",
-        html_content=chunk,
-        author_name="Platypus Review"
-    )
-    telegraph_urls.append(page['url'])
-
-print("Created Telegraph articles:")
-print("\n".join(telegraph_urls))
