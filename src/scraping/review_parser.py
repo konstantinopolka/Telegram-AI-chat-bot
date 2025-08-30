@@ -82,7 +82,7 @@ class ReviewParser(Parser):
         #TO-DO
         
         authors = []
-        byline = soup.select_one('.byline, .author, [class*="author"]')
+        byline = soup.select_one('.bpf-content h2')
         if byline:
             text = byline.get_text(strip=True).lower()
             if 'by ' in text:

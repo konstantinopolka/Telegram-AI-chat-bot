@@ -3,11 +3,7 @@ from typing import List, Optional, Dict, Any
 import requests
 from src.scraping.fetcher import Fetcher
 
-from telegraph import Telegraph
-import json
-import os
 
-# ARTICLE_URL = 'https://platypus1917.org/2025/07/01/what-is-capitalism/'
 class ReviewFetcher(Fetcher):
     def __init__(self, base_url: str):
         self.base_url = base_url
@@ -47,12 +43,4 @@ class ReviewFetcher(Fetcher):
     
     
 
-    
-
-title_tag = soup.find('h1')
-title = title_tag.get_text(strip=True) if title_tag else "Untitled"
-
-content_div = soup.find('div', class_='dc-page-seo-wrapper')
-if not content_div:
-    content_div = soup
 
