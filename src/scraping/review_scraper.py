@@ -25,7 +25,7 @@ class ReviewScraper(Scraper):
             self.handle_scraping_error(e, "getting listing URLs")
             return []
     
-    def get_content_data(self, url: str) -> Optional[Dict[str, Any]]:
+    def get_page_data(self, url: str) -> Optional[Dict[str, Any]]:
         """
         Get structured data from a single article URL.
         Returns dictionary ready for Telegraph publishing.
@@ -37,14 +37,14 @@ class ReviewScraper(Scraper):
             self.handle_scraping_error(e, f"getting content from {url}")
             return None
         
-    def get_all_content_data(self) -> List[Dict[str, Any]]:
+    def get_multiple_pages_data(self) -> List[Dict[str, Any]]:
         """
         Complete workflow: get all articles from the review site.
         1. Get listing URLs
         2. Fetch and parse each article
         3. Filter and validate content
         """
-        all_content = []
+        multiple_pages_content = []
         
         # Get all article URLs from listing page
         article_urls = self.get_listing_urls()
@@ -56,13 +56,13 @@ class ReviewScraper(Scraper):
         
         # Fetch and parse each article
         for url in article_urls:
-            content_data = self.get_content_data(url)
+            content_data = self.get_page_data(url)
             if content_data and self.validate_content_data(content_data):
-                all_content.append(content_data)
+                multiple_pages_content.append(content_data)
             else:
                 print(f"Skipped invalid content from {url}")
         
-        return all_content
+        return multiple_pages_content
     
     def scrape_review_batch(self) -> List[Dict[str, Any]]:
         """
@@ -73,7 +73,7 @@ class ReviewScraper(Scraper):
             print(f"Starting review batch scraping from {self.base_url}")
             
             # Get all content data
-            content_list = self.get_all_content_data()
+            content_list = self.get_multiple_pages_data()
             
             # Apply any additional filtering
             filtered_content = self.filter_content_by_criteria(content_list)
@@ -99,7 +99,7 @@ class ReviewScraper(Scraper):
                 return None
             
             # Get content data
-            content_data = self.get_content_data(article_url)
+            content_data = self.get_page_data(article_url)
             
             if content_data and self.validate_content_data(content_data):
                 print(f"Successfully scraped: {content_data['title']}")

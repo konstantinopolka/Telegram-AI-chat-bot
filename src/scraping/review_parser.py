@@ -24,6 +24,7 @@ class ReviewParser(Parser):
         """Parse single article HTML to extract structured data"""
         soup = self.create_soup(html)
         #TO-DO
+        # required_fields = ['title', 'content', 'original_url']
         
         return {
             'title': self.extract_title(soup),

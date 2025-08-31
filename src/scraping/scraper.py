@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
+from src.scraping.constants import REQUIRED_FIELDS 
 
 class Scraper(ABC):
     """
@@ -16,7 +17,7 @@ class Scraper(ABC):
         pass
     
     @abstractmethod
-    def get_content_data(self, url: str) -> Optional[Dict[str, Any]]:
+    def get_page_data(self, url: str) -> Optional[Dict[str, Any]]:
         """
         Get structured data from a single content URL.
         Returns dictionary with title, content, metadata, etc.
@@ -24,7 +25,7 @@ class Scraper(ABC):
         pass
     
     @abstractmethod
-    def get_all_content_data(self) -> List[Dict[str, Any]]:
+    def get_multiple_pages_data(self) -> List[Dict[str, Any]]:
         """
         Complete workflow: get all content from the site.
         Returns list of structured content data dictionaries.
@@ -45,8 +46,8 @@ class Scraper(ABC):
         Validate that content data has required fields.
         Can be overridden for specific validation rules.
         """
-        required_fields = ['title', 'content', 'original_url']
-        return all(field in content_data and content_data[field] for field in required_fields)
+        REQUIRED_FIELDS = ['title', 'content', 'original_url']
+        return all(field in content_data and content_data[field] for field in REQUIRED_FIELDS)
     
     def filter_content_by_criteria(self, content_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
