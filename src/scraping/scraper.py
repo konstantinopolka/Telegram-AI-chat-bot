@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
-from src.scraping.constants import REQUIRED_FIELDS 
 
 class Scraper(ABC):
     """

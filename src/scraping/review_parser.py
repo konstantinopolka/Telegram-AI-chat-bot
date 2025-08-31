@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from bs4 import BeautifulSoup
 from src.scraping.parser import Parser
-
+import requests
 class ReviewParser(Parser):
     def __init__(self, base_url: str):
         self.base_url = base_url
@@ -23,15 +23,12 @@ class ReviewParser(Parser):
     def parse_content_page(self, html: str, url: str) -> Dict[str, Any]:
         """Parse single article HTML to extract structured data"""
         soup = self.create_soup(html)
-        #TO-DO
-        # required_fields = ['title', 'content', 'original_url']
         
         return {
             'title': self.extract_title(soup),
             'content': self.extract_content(soup),
             'original_url': url,
-            **self.extract_metadata(soup),
-            'review_id': hash(url) % 1000000
+            **self.extract_metadata(soup)
         }
     
     def extract_title(self, soup: BeautifulSoup) -> str:
@@ -53,7 +50,8 @@ class ReviewParser(Parser):
         """Extract metadata from Platypus article"""
         metadata = {
             'authors': self._extract_authors(soup),
-            'published_date': self._extract_date(soup)
+            'published_date': self._extract_date(soup),
+            'review_id': self._extract_id(soup)
         }
         return metadata
     
@@ -80,22 +78,54 @@ class ReviewParser(Parser):
     
     def _extract_authors(self, soup: BeautifulSoup) -> List[str]:
         """Extract authors from article"""
-        #TO-DO
-        
         authors = []
         byline = soup.select_one('.bpf-content h2')
         if byline:
-            text = byline.get_text(strip=True).lower()
-            if 'by ' in text:
-                author_part = text.split('by ')[1]
-                authors = [a.strip() for a in author_part.replace(' and ', ',').split(',')]
+            text = byline.get_text(strip=True)  # Keep original case
+            
+            # Check if it contains "by" prefix
+            if 'by ' in text.lower():
+                # Extract part after "by"
+                author_part = text.split('by ')[1] if 'by ' in text else text.split('By ')[1]
+            else:
+                # No "by" prefix, use the whole text as authors
+                author_part = text
+            
+            # Split on "and" and clean up
+            authors = [a.strip() for a in author_part.replace(' and ', ',').split(',')]
+            
         return [a for a in authors if a]
     
     def _extract_date(self, soup: BeautifulSoup) -> str:
         """Extract publication date"""
+        # Look for the specific pattern: "| February 2025" or "| July–August 2025"
+        container = soup.select_one('.bpf-content .has-text-align-right')
+        if container:
+            text = container.get_text(strip=True)
+            # Split on "|" and take the date part
+            if "|" in text:
+                date_part = text.split("|")[1].strip()
+                return date_part
         
-        #TO-DO
+        # Fallback to generic date selectors
         date_elem = soup.select_one('time, .date, [class*="date"]')
         if date_elem:
             return date_elem.get('datetime') or self.clean_text(date_elem.get_text())
         return ""
+    
+    def _extract_id(self, soup: BeautifulSoup) -> int:
+        """Extract review id from Platypus Review number"""
+        container = soup.select_one('.bpf-content .has-text-align-right')
+        if container:
+            text = container.get_text(strip=True)
+            print(f"text is {text}")
+            # Look for pattern like "Platypus Review 173" or "Platypus Review173"
+            import re
+            match = re.search(r'Platypus Review\s*(\d+)', text)
+            if match:
+                return int(match.group(1))
+        
+        # Fallback: generate ID from URL hash
+        return hash(self.base_url) % 1000000
+        
+
