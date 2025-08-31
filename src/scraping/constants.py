@@ -1,0 +1,1 @@
+REQUIRED_FIELDS = ['title', 'content', 'original_url']

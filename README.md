@@ -87,19 +87,19 @@ When you send a message, you'll see detailed logs like:
 2025-08-20 10:46:34,123 - src.bot_instance - INFO - Received update: {
   "message_id": 36,
   "from": {
-    "id": 674318335,
-    "is_bot": false,
-    "first_name": "Kostiantyn",
-    "username": "kostyer",
+    "id": ,
+    "is_bot": ,
+    "first_name": "",
+    "username": "",
     "language_code": "de"
   },
   "chat": {
     "id": 674318335,
-    "first_name": "Kostiantyn",
-    "username": "kostyer",
+    "first_name": "",
+    "username": "",
     "type": "private"
   },
-  "date": 1755679594,
+  "date": ,
   "text": "what",
   "content_type": "text"
 }
@@ -107,21 +107,21 @@ When you send a message, you'll see detailed logs like:
 2025-08-20 10:46:34,456 - src.bot_instance - INFO - Sent: {
   "ok": true,
   "result": {
-    "message_id": 37,
+    "message_id": ,
     "from": {
       "id": 7903107764,
       "is_bot": true,
-      "first_name": "Arsen Markarjan",
-      "username": "Markarjan_bot"
+      "first_name": "",
+      "username": ""
     },
     "chat": {
       "id": 674318335,
-      "first_name": "Kostiantyn",
-      "username": "kostyer",
-      "type": "private"
+      "first_name": "",
+      "username": "",
+      "type": ""
     },
-    "date": 1755679594,
-    "text": "You said: what"
+    "date": ,
+    "text": ""
   }
 }
 ```
