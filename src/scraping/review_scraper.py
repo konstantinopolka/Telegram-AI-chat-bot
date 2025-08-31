@@ -25,84 +25,36 @@ class ReviewScraper(Scraper):
             self.handle_scraping_error(e, "getting listing URLs")
             return []
     
-    def get_page_data(self, url: str) -> Optional[Dict[str, Any]]:
+    def get_content_data(self, article_url: str) -> Optional[Dict[str, Any]]:
         """
-        Get structured data from a single article URL.
-        Returns dictionary ready for Telegraph publishing.
+        Get content data for a single article URL.
+        Handles URL validation, fetching, and parsing.
         """
-        try:
-            html = self.fetcher.fetch_page(url)
-            return self.parser.parse_content_page(html, url)
-        except Exception as e:
-            self.handle_scraping_error(e, f"getting content from {url}")
+        # Validate URL format first
+        if not self.fetcher.validate_url(article_url):
+            print(f"Invalid URL format: {article_url}")
             return None
         
-    def get_multiple_pages_data(self) -> List[Dict[str, Any]]:
-        """
-        Complete workflow: get all articles from the review site.
-        1. Get listing URLs
-        2. Fetch and parse each article
-        3. Filter and validate content
-        """
-        multiple_pages_content = []
-        
-        # Get all article URLs from listing page
-        article_urls = self.get_listing_urls()
-        if not article_urls:
-            print("No article URLs found on listing page")
-            return []
-        
-        print(f"Found {len(article_urls)} articles to scrape")
-        
-        # Fetch and parse each article
-        for url in article_urls:
-            content_data = self.get_page_data(url)
-            if content_data and self.validate_content_data(content_data):
-                multiple_pages_content.append(content_data)
-            else:
-                print(f"Skipped invalid content from {url}")
-        
-        return multiple_pages_content
-    
-    def scrape_review_batch(self) -> List[Dict[str, Any]]:
-        """
-        Main scraping method: get all review articles ready for publishing.
-        This is the primary interface for the RepostingOrchestrator.
-        """
-        try:
-            print(f"Starting review batch scraping from {self.base_url}")
-            
-            # Get all content data
-            content_list = self.get_multiple_pages_data()
-            
-            # Apply any additional filtering
-            filtered_content = self.filter_content_by_criteria(content_list)
-            
-            print(f"Successfully scraped {len(filtered_content)} articles")
-            return filtered_content
-            
-        except Exception as e:
-            self.handle_scraping_error(e, "review batch scraping")
-            return []
-    
+        # Fetch and parse content
+        html = self.fetcher.fetch_page(article_url)
+        content_data = self.parser.parse_content_page(html, article_url)
+        return content_data
+
     def scrape_single_article(self, article_url: str) -> Optional[Dict[str, Any]]:
         """
         Scrape a single article by URL.
-        Useful for testing or processing specific articles.
+        Complete workflow: fetch → parse → validate → return article data.
         """
         try:
-            print(f"Scraping single article: {article_url}")
+            print(f"Scraping article: {article_url}")
             
-            # Validate URL format
-            if not self.fetcher.validate_url(article_url):
-                print(f"Invalid URL format: {article_url}")
-                return None
+            # 1.2.1 Get page data
+            content_data = self.get_content_data(article_url)
             
-            # Get content data
-            content_data = self.get_page_data(article_url)
-            
+            # 1.2.2 Validate content
             if content_data and self.validate_content_data(content_data):
                 print(f"Successfully scraped: {content_data['title']}")
+                # 1.2.3 Return dictionary representing an article
                 return content_data
             else:
                 print(f"Failed to scrape valid content from {article_url}")
@@ -111,6 +63,40 @@ class ReviewScraper(Scraper):
         except Exception as e:
             self.handle_scraping_error(e, f"scraping single article {article_url}")
             return None
+        
+    def scrape_review_batch(self) -> List[Dict[str, Any]]:
+        """
+        Main scraping method: scrape all review articles.
+        Workflow:
+        1. Get URLs of each article
+        2. Scrape each article (using scrape_single_article)
+        3. Return list of dictionaries representing review as a list of articles
+        """
+        try:
+            print(f"Starting review batch scraping from {self.base_url}")
+            
+            # 1.1 Get URLs of each article
+            article_urls = self.get_listing_urls()
+            if not article_urls:
+                print("No article URLs found on listing page")
+                return []
+            
+            print(f"Found {len(article_urls)} articles to scrape")
+            
+            # 1.2 Scrape each article
+            scraped_articles = []
+            for url in article_urls:
+                article_data = self.scrape_single_article(url)
+                if article_data:
+                    scraped_articles.append(article_data)
+            
+            print(f"Successfully scraped {len(scraped_articles)} articles")
+            # 1.3 Return list of dictionaries representing review as a list of articles
+            return scraped_articles
+            
+        except Exception as e:
+            self.handle_scraping_error(e, "review batch scraping")
+            return []
     
     def preview_content_summary(self) -> Dict[str, Any]:
         """

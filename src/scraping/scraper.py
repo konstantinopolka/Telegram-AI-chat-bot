@@ -16,18 +16,11 @@ class Scraper(ABC):
         pass
     
     @abstractmethod
-    def get_page_data(self, url: str) -> Optional[Dict[str, Any]]:
+    def scrape_single_article(self, article_url: str) -> Optional[Dict[str, Any]]:
         """
-        Get structured data from a single content URL.
+        Scrape a single article by URL.
+        Complete workflow: fetch → parse → validate → return article data.
         Returns dictionary with title, content, metadata, etc.
-        """
-        pass
-    
-    @abstractmethod
-    def get_multiple_pages_data(self) -> List[Dict[str, Any]]:
-        """
-        Complete workflow: get all content from the site.
-        Returns list of structured content data dictionaries.
         """
         pass
     
@@ -36,6 +29,7 @@ class Scraper(ABC):
         """
         Scrape a batch of reviews/articles from the main page.
         This is the main method that orchestrates the full scraping process.
+        Returns list of structured content data dictionaries.
         """
         pass
     
@@ -47,13 +41,6 @@ class Scraper(ABC):
         """
         REQUIRED_FIELDS = ['title', 'content', 'original_url']
         return all(field in content_data and content_data[field] for field in REQUIRED_FIELDS)
-    
-    def filter_content_by_criteria(self, content_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Filter content based on specific criteria.
-        Can be overridden for custom filtering logic.
-        """
-        return [content for content in content_list if self.validate_content_data(content)]
     
     def handle_scraping_error(self, error: Exception, context: str) -> None:
         """
