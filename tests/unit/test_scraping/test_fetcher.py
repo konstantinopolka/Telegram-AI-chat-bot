@@ -1,9 +1,7 @@
 import pytest
 import requests
-from unittest.mock import Mock, patch, MagicMock
-from typing import List, Optional, Dict, Any
+from unittest.mock import patch
 
-from src.scraping.fetcher import Fetcher
 from src.scraping.review_fetcher import ReviewFetcher
 
 class TestFetcher:
