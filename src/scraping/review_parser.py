@@ -1,8 +1,9 @@
 from typing import List, Dict, Any
 from bs4 import BeautifulSoup
-from src.scraping.parser import Parser
-from src.scraping.constants import ALLOWED_TAGS, IRRELEVANT_INFO_TAGS
+from .parser import Parser
+from .constants import ALLOWED_TAGS, IRRELEVANT_INFO_TAGS
 import requests
+
 class ReviewParser(Parser):
     def __init__(self, base_url: str):
         self.base_url = base_url

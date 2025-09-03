@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 
 import requests
-from src.scraping.fetcher import Fetcher
+from src.scraping import Fetcher
 
 
 class ReviewFetcher(Fetcher):

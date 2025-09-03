@@ -1,8 +1,8 @@
 from typing import List, Optional, Dict, Any
-from src.scraping.scraper import Scraper
-from src.scraping.review_fetcher import ReviewFetcher
-from src.scraping.review_parser import ReviewParser
-
+from .scraper import Scraper
+from .review_fetcher import ReviewFetcher
+from .review_parser import ReviewParser
+from .constants import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH
 class ReviewScraper(Scraper):
     """
     Concrete scraper for review websites that combines fetching and parsing.
@@ -84,11 +84,7 @@ class ReviewScraper(Scraper):
             print(f"Found {len(article_urls)} articles to scrape")
             
             # 1.2 Scrape each article
-            scraped_articles = []
-            for url in article_urls:
-                article_data = self.scrape_single_article(url)
-                if article_data:
-                    scraped_articles.append(article_data)
+            scraped_articles = [article_data for url in article_urls if (article_data := self.scrape_single_article(url))]
             
             print(f"Successfully scraped {len(scraped_articles)} articles")
             # 1.3 Return list of dictionaries representing review as a list of articles
@@ -123,12 +119,12 @@ class ReviewScraper(Scraper):
         # Basic validation from parent class
         if not super().validate_content_data(content_data):
             return False
-        
+       
         # Review-specific validation
-        if len(content_data.get('title', '')) < 5:
+        if len(content_data.get('title', '')) < MIN_TITLE_LENGTH:
             return False
         
-        if len(content_data.get('content', '')) < 100:
+        if len(content_data.get('content', '')) < MIN_CONTENT_LENGTH:
             return False
         
         # Check if content has minimum HTML structure
@@ -145,6 +141,10 @@ class ReviewScraper(Scraper):
         print(error_msg)
         
         # Could add logging here in the future
+        # logger.error(error_msg)
+        
+        # Could add metrics/monitoring here
+        # metrics.increment('scraping_errors', tags={'context': context})
         # logger.error(error_msg)
         
         # Could add metrics/monitoring here

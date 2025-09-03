@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
-
+from .constants import REQUIRED_FIELDS
 class Scraper(ABC):
     """
     Abstract base class for scrapers that combine fetching and parsing operations.
@@ -39,7 +39,7 @@ class Scraper(ABC):
         Validate that content data has required fields.
         Can be overridden for specific validation rules.
         """
-        REQUIRED_FIELDS = ['title', 'content', 'original_url']
+        
         return all(field in content_data and content_data[field] for field in REQUIRED_FIELDS)
     
     def handle_scraping_error(self, error: Exception, context: str) -> None:
