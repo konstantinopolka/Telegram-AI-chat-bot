@@ -40,22 +40,22 @@ class TestParser:
         assert soup.title.get_text() == "Test Page"
         assert len(soup.find_all('p')) == 2
         assert soup.select_one('.content') is not None
-    
-    def test_normalize_url_relative_urls(self):
+        
+    @pytest.mark.parametrize(
+        "base_url, relative_url, expected_url",
+        [
+            ("https://example.com/base",  "/articles/123", "https://example.com/articles/123"), # Relative URL starting with /
+            ("https://example.com/base", "articles/123", "articles/123")  # Relative URL without leading / (returns as-is in current implementation)
+        ]
+    )
+    def test_normalize_url_relative_urls(self, base_url, relative_url, expected_url):
         """Test normalize_url with relative URLs"""
-        base_url = "https://example.com/base"
-        
-        # Relative URL starting with /
-        relative_url = "/articles/123"
         result = self.parser.normalize_url(relative_url, base_url)
-        assert result == "https://example.com/articles/123"
+        assert result == expected_url
+    @pytest.mark.parametrize(
         
-        # Relative URL without leading / (returns as-is in current implementation)
-        relative_url = "articles/123"
-        result = self.parser.normalize_url(relative_url, base_url)
-        assert result == "articles/123"  # Current implementation returns URL as-is
-    
-    def test_normalize_url_absolute_urls(self):
+    )
+    def test_normalize_url_absolute_urls(self, base_url, ):
         """Test normalize_url with absolute URLs"""
         base_url = "https://example.com/base"
         

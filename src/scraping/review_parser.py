@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 from bs4 import BeautifulSoup
 from src.scraping.parser import Parser
+from src.scraping.constants import ALLOWED_TAGS, IRRELEVANT_INFO_TAGS
 import requests
 class ReviewParser(Parser):
     def __init__(self, base_url: str):
@@ -9,16 +10,28 @@ class ReviewParser(Parser):
     def parse_listing_page(self, html: str) -> List[str]:
         """Parse review page HTML to extract article URLs"""
         soup = self.create_soup(html)
-        article_urls = []
+     
 
-        links = soup.select('h4 > a[href^="https://platypus1917.org/20"]')
-        for link in links:
-            href = link.get('href')
-            if href:
-                url = self.normalize_url(href, self.base_url)
-                article_urls.append(url)
+        # Multiple selectors for both relative and absolute URLs
+        selectors = [
+            'h4 > a[href^="/20"]',                           # Relative URLs: /2025/01/article
+            'h4 > a[href^="https://platypus1917.org/20"]'    # Absolute URLs
+        ]
         
-        return article_urls
+        article_urls = []
+        for selector in selectors:
+            links = soup.select(selector)
+            article_urls.extend([url for link in links if (url := self.extract_link(link))])
+        
+        # Remove duplicates while preserving order
+        return list(dict.fromkeys(article_urls))
+    
+    def extract_link(self, link):
+        href = link.get('href')
+        if href:
+            url = self.normalize_url(href, self.base_url)
+            return url
+        return None
     
     def parse_content_page(self, html: str, url: str) -> Dict[str, Any]:
         """Parse single article HTML to extract structured data"""
@@ -59,22 +72,23 @@ class ReviewParser(Parser):
         """Clean HTML content for Telegraph compatibility"""
         content_copy = BeautifulSoup(str(content_div), 'html.parser')
         
-        allowed_tags = {
-            'a', 'b', 'i', 'em', 'strong', 'u', 's', 'blockquote',
-            'code', 'pre', 'p', 'ul', 'ol', 'li', 'br', 'hr', 'img'
-        }
-        
-        # Remove unwanted elements
-        for unwanted in content_copy.select('nav, footer, .sidebar, script, style, .comments'):
-            unwanted.decompose()
-        #TO-DO
-        
-        # Clean tags
-        for tag in content_copy.find_all():
-            if tag.name not in allowed_tags:
-                tag.unwrap()
+        # Apply cleaning operations
+        self._remove_unwanted_elements(content_copy)
+        self._clean_disallowed_tags(content_copy)
         
         return ''.join(str(child) for child in content_copy.contents)
+    
+    def _remove_unwanted_elements(self, soup: BeautifulSoup) -> None:
+        """Remove unwanted elements from the soup"""
+        for unwanted in soup.select(IRRELEVANT_INFO_TAGS):
+            unwanted.decompose()
+    
+    def _clean_disallowed_tags(self, soup: BeautifulSoup) -> None:
+        """Remove disallowed tags while preserving their content"""
+        for tag in soup.find_all():
+            if tag.name not in ALLOWED_TAGS:
+                tag.unwrap()
+
     
     def _extract_authors(self, soup: BeautifulSoup) -> List[str]:
         """Extract authors from article"""
@@ -127,5 +141,5 @@ class ReviewParser(Parser):
         
         # Fallback: generate ID from URL hash
         return hash(self.base_url) % 1000000
-        
+
 

@@ -19,8 +19,8 @@ class Fetcher(ABC):
         try:
             from urllib.parse import urlparse
             result = urlparse(url)
-            return all([result.scheme, result.netloc])
-        except:
+            return all([result.scheme, result.netloc]) # all returns true only if all items are truthy
+        except Exception:
             return False
     
     def handle_request_error(self, error: Exception, url: str) -> None:
