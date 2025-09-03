@@ -52,64 +52,69 @@ class TestParser:
         """Test normalize_url with relative URLs"""
         result = self.parser.normalize_url(relative_url, base_url)
         assert result == expected_url
+        
     @pytest.mark.parametrize(
-        
+        "base_url, absolute_url, expected_url",
+        [
+            ("https://example.com/base", "https://other-site.com/article", "https://other-site.com/article"),  # HTTPS absolute URL
+            ("https://example.com/base", "http://example.com/article", "http://example.com/article"),  # HTTP absolute URL
+            ("https://example.com/base", "https://example.com/other/page", "https://example.com/other/page"),  # Same domain absolute URL
+            ("http://test.com", "https://external.org/path", "https://external.org/path")  # Different protocol and domain
+        ]
     )
-    def test_normalize_url_absolute_urls(self, base_url, ):
+    def test_normalize_url_absolute_urls(self, base_url, absolute_url, expected_url):
         """Test normalize_url with absolute URLs"""
-        base_url = "https://example.com/base"
-        
-        # Absolute URL should remain unchanged
-        absolute_url = "https://other-site.com/article"
         result = self.parser.normalize_url(absolute_url, base_url)
-        assert result == absolute_url
-        
-        # HTTP URL should remain unchanged
-        http_url = "http://example.com/article"
-        result = self.parser.normalize_url(http_url, base_url)
-        assert result == http_url
+        assert result == expected_url
     
-    def test_normalize_url_complex_base_urls(self):
+    @pytest.mark.parametrize(
+        "base_url, relative_url, expected_url",
+        [
+            ("https://example.com/section/subsection/", "/new-section/article", "https://example.com/new-section/article"),  # Complex base with relative
+            ("https://example.com/path/to/page", "/different/path", "https://example.com/different/path"),  # Nested path base
+            ("https://subdomain.example.com/api/v1/", "/endpoint", "https://subdomain.example.com/endpoint"),  # Subdomain with API path
+            ("https://example.com:8080/app/", "/resource", "https://example.com:8080/resource")  # Base with port
+        ]
+    )
+    def test_normalize_url_complex_base_urls(self, base_url, relative_url, expected_url):
         """Test normalize_url with complex base URLs"""
-        base_url = "https://example.com/section/subsection/"
-        
-        # Relative URL with parent directory reference
-        relative_url = "/new-section/article"
         result = self.parser.normalize_url(relative_url, base_url)
-        assert result == "https://example.com/new-section/article"
+        assert result == expected_url
     
-    def test_clean_text_whitespace_normalization(self):
+    @pytest.mark.parametrize(
+        "input_text, expected_result",
+        [
+            ("Hello    world", "Hello world"),  # Multiple spaces
+            ("  Hello world  ", "Hello world"),  # Leading and trailing whitespace
+            ("Hello\n\tworld\r\n", "Hello world"),  # Newlines and tabs
+            ("Hello\n\n\nworld", "Hello world"),  # Multiple newlines
+            ("Hello\t\t\tworld", "Hello world"),  # Multiple tabs
+            ("  \t  Hello  \n  world  \r  ", "Hello world"),  # Mixed whitespace
+            ("Hello\u00A0world", "Hello world")  # Non-breaking space
+        ]
+    )
+    def test_clean_text_whitespace_normalization(self, input_text, expected_result):
         """Test clean_text normalizes whitespace correctly"""
-        # Multiple spaces
-        text = "Hello    world"
-        result = self.parser.clean_text(text)
-        assert result == "Hello world"
-        
-        # Leading and trailing whitespace
-        text = "  Hello world  "
-        result = self.parser.clean_text(text)
-        assert result == "Hello world"
-        
-        # Newlines and tabs
-        text = "Hello\n\tworld\r\n"
-        result = self.parser.clean_text(text)
-        assert result == "Hello world"
+        result = self.parser.clean_text(input_text)
+        assert result == expected_result
     
-    def test_clean_text_empty_and_special_cases(self):
+    @pytest.mark.parametrize(
+        "input_text, expected_result",
+        [
+            ("", ""),  # Empty string
+            ("   \n\t  ", ""),  # Only whitespace
+            ("Hello", "Hello"),  # Single word
+            ("Line1\n\n\nLine2", "Line1 Line2"),  # Multiple newlines
+            ("Word", "Word"),  # Single word no whitespace
+            ("\n\n\n", ""),  # Only newlines
+            ("\t\t\t", ""),  # Only tabs
+            ("  A  ", "A")  # Single character with whitespace
+        ]
+    )
+    def test_clean_text_empty_and_special_cases(self, input_text, expected_result):
         """Test clean_text with empty and special cases"""
-        # Empty string
-        assert self.parser.clean_text("") == ""
-        
-        # Only whitespace
-        assert self.parser.clean_text("   \n\t  ") == ""
-        
-        # Single word
-        assert self.parser.clean_text("Hello") == "Hello"
-        
-        # Multiple newlines
-        text = "Line1\n\n\nLine2"
-        result = self.parser.clean_text(text)
-        assert result == "Line1 Line2"
+        result = self.parser.clean_text(input_text)
+        assert result == expected_result
 
 
 class TestParserAbstractMethods:
