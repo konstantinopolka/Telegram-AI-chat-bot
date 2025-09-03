@@ -176,67 +176,73 @@ class TestParserUtilityMethods:
         assert soup.find('p') is not None
         assert soup.find('div') is not None
     
-    def test_create_soup_with_empty_html(self):
+    @pytest.mark.parametrize(
+        "html_input, expected_result",
+        [
+            ("", True),  # Empty string should create valid soup
+            ("<html></html>", True),  # Minimal HTML should create valid soup with html element
+            ("<html><body></body></html>", True),  # Basic structure
+            ("   ", True),  # Whitespace only
+            ("<p>Text</p>", True),  # Fragment without html tag
+        ]
+    )
+    def test_create_soup_with_empty_html(self, html_input, expected_result):
         """Test create_soup with empty or minimal HTML"""
-        # Empty string
-        soup = self.parser.create_soup("")
-        assert isinstance(soup, BeautifulSoup)
+        soup = self.parser.create_soup(html_input)
+        assert isinstance(soup, BeautifulSoup) == expected_result
         
-        # Minimal HTML
-        soup = self.parser.create_soup("<html></html>")
-        assert isinstance(soup, BeautifulSoup)
-        assert soup.html is not None
+        # Additional checks for non-empty HTML
+        if html_input.strip() and "<html>" in html_input:
+            assert soup.html is not None
     
-    def test_normalize_url_edge_cases(self):
+    @pytest.mark.parametrize(
+        "base_url, test_url, expected_result",
+        [
+            ("https://example.com", "", ""),  # Empty URL (returns as-is)
+            ("https://example.com", "/", "https://example.com/"),  # Just a slash
+            ("https://example.com", "#section", "#section"),  # Fragment URL (returns as-is)
+            ("https://example.com", "?param=value", "?param=value"),  # Query parameters (returns as-is)
+            ("https://example.com", "javascript:void(0)", "javascript:void(0)"),  # JavaScript URL (returns as-is)
+            ("https://example.com/path", "/new-path", "https://example.com/new-path"),  # Absolute path
+            ("https://example.com", "//other.com/path", "//other.com/path"),  # Protocol-relative URL (returns as-is)
+        ]
+    )
+    def test_normalize_url_edge_cases(self, base_url, test_url, expected_result):
         """Test normalize_url with edge cases"""
-        base_url = "https://example.com"
-        
-        # Empty URL (returns as-is in current implementation)
-        result = self.parser.normalize_url("", base_url)
-        assert result == ""  # Current implementation returns empty string as-is
-        
-        # Just a slash
-        result = self.parser.normalize_url("/", base_url)
-        assert result == "https://example.com/"
-        
-        # Fragment URL (returns as-is in current implementation)
-        result = self.parser.normalize_url("#section", base_url)
-        assert result == "#section"  # Current implementation returns fragment as-is
-        
-        # Query parameters (returns as-is in current implementation)
-        result = self.parser.normalize_url("?param=value", base_url)
-        assert result == "?param=value"  # Current implementation returns query as-is
+        result = self.parser.normalize_url(test_url, base_url)
+        assert result == expected_result
     
-    def test_clean_text_unicode_handling(self):
+    @pytest.mark.parametrize(
+        "input_text, expected_result",
+        [
+            ("Héllo wörld", "Héllo wörld"),  # Unicode characters
+            ("Hello 世界", "Hello 世界"),  # Mixed Unicode and ASCII
+            ("Hello\u00A0world", "Hello world"),  # Non-breaking space
+            ("Café résumé naïve", "Café résumé naïve"),  # Accented characters
+            ("🌟 Hello 🌟", "🌟 Hello 🌟"),  # Emoji
+            ("Здравствуй мир", "Здравствуй мир"),  # Cyrillic
+            ("مرحبا بالعالم", "مرحبا بالعالم"),  # Arabic
+        ]
+    )
+    def test_clean_text_unicode_handling(self, input_text, expected_result):
         """Test clean_text with Unicode characters"""
-        # Unicode characters
-        text = "Héllo wörld"
-        result = self.parser.clean_text(text)
-        assert result == "Héllo wörld"
-        
-        # Mixed Unicode and ASCII
-        text = "Hello 世界"
-        result = self.parser.clean_text(text)
-        assert result == "Hello 世界"
-        
-        # Unicode whitespace
-        text = "Hello\u00A0world"  # Non-breaking space
-        result = self.parser.clean_text(text)
-        assert result == "Hello world"
+        result = self.parser.clean_text(input_text)
+        assert result == expected_result
     
-    def test_clean_text_preserves_meaningful_content(self):
+    @pytest.mark.parametrize(
+        "input_text, expected_result",
+        [
+            ("Hello, world! How are you?", "Hello, world! How are you?"),  # Punctuation
+            ("The year  2025   is here", "The year 2025 is here"),  # Numbers with extra spaces
+            ("Email: user@example.com", "Email: user@example.com"),  # Special characters
+            ("Price: $19.99 (USD)", "Price: $19.99 (USD)"),  # Currency symbols
+            ("Version 2.0.1-beta", "Version 2.0.1-beta"),  # Version numbers
+            ("Path: /home/user/file.txt", "Path: /home/user/file.txt"),  # File paths
+            ("URL: https://example.com?q=test", "URL: https://example.com?q=test"),  # URLs
+            ("Math: 2 + 2 = 4", "Math: 2 + 2 = 4"),  # Mathematical expressions
+        ]
+    )
+    def test_clean_text_preserves_meaningful_content(self, input_text, expected_result):
         """Test that clean_text preserves meaningful content"""
-        # Should preserve punctuation
-        text = "Hello, world! How are you?"
-        result = self.parser.clean_text(text)
-        assert result == "Hello, world! How are you?"
-        
-        # Should preserve numbers
-        text = "The year  2025   is here"
-        result = self.parser.clean_text(text)
-        assert result == "The year 2025 is here"
-        
-        # Should preserve special characters
-        text = "Email: user@example.com"
-        result = self.parser.clean_text(text)
-        assert result == "Email: user@example.com"
+        result = self.parser.clean_text(input_text)
+        assert result == expected_result
