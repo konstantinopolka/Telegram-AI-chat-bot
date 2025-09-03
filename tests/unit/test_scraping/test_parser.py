@@ -5,24 +5,24 @@ from bs4 import BeautifulSoup
 from src.scraping.parser import Parser
 from src.scraping.review_parser import ReviewParser
 
+@pytest.fixture
+def parser():
+    return ReviewParser("https://platypus1917.org/platypus-review/")
 
 class TestParser:
     """Test the predefined methods from the abstract Parser class"""
     
-    def setup_method(self):
-        """Set up test fixtures"""
-        self.parser = ReviewParser("https://platypus1917.org/platypus-review/")
     
-    def test_create_soup(self):
+    def test_create_soup(self, parser):
         """Test create_soup creates BeautifulSoup object correctly"""
         html = "<html><body><h1>Test</h1></body></html>"
-        soup = self.parser.create_soup(html)
+        soup = parser.create_soup(html)
         
         assert isinstance(soup, BeautifulSoup)
         assert soup.find('h1').get_text() == "Test"
         assert soup.name == "[document]"
     
-    def test_create_soup_with_complex_html(self):
+    def test_create_soup_with_complex_html(self, parser):
         """Test create_soup with more complex HTML"""
         html = """
         <html>
@@ -35,7 +35,7 @@ class TestParser:
             </body>
         </html>
         """
-        soup = self.parser.create_soup(html)
+        soup = parser.create_soup(html)
         
         assert soup.title.get_text() == "Test Page"
         assert len(soup.find_all('p')) == 2
@@ -48,9 +48,9 @@ class TestParser:
             ("https://example.com/base", "articles/123", "articles/123")  # Relative URL without leading / (returns as-is in current implementation)
         ]
     )
-    def test_normalize_url_relative_urls(self, base_url, relative_url, expected_url):
+    def test_normalize_url_relative_urls(self, parser, base_url, relative_url, expected_url):
         """Test normalize_url with relative URLs"""
-        result = self.parser.normalize_url(relative_url, base_url)
+        result = parser.normalize_url(relative_url, base_url)
         assert result == expected_url
         
     @pytest.mark.parametrize(
@@ -62,9 +62,9 @@ class TestParser:
             ("http://test.com", "https://external.org/path", "https://external.org/path")  # Different protocol and domain
         ]
     )
-    def test_normalize_url_absolute_urls(self, base_url, absolute_url, expected_url):
+    def test_normalize_url_absolute_urls(self, parser, base_url, absolute_url, expected_url):
         """Test normalize_url with absolute URLs"""
-        result = self.parser.normalize_url(absolute_url, base_url)
+        result = parser.normalize_url(absolute_url, base_url)
         assert result == expected_url
     
     @pytest.mark.parametrize(
@@ -76,9 +76,9 @@ class TestParser:
             ("https://example.com:8080/app/", "/resource", "https://example.com:8080/resource")  # Base with port
         ]
     )
-    def test_normalize_url_complex_base_urls(self, base_url, relative_url, expected_url):
+    def test_normalize_url_complex_base_urls(self, parser, base_url, relative_url, expected_url):
         """Test normalize_url with complex base URLs"""
-        result = self.parser.normalize_url(relative_url, base_url)
+        result = parser.normalize_url(relative_url, base_url)
         assert result == expected_url
     
     @pytest.mark.parametrize(
@@ -93,9 +93,9 @@ class TestParser:
             ("Hello\u00A0world", "Hello world")  # Non-breaking space
         ]
     )
-    def test_clean_text_whitespace_normalization(self, input_text, expected_result):
+    def test_clean_text_whitespace_normalization(self, parser, input_text, expected_result):
         """Test clean_text normalizes whitespace correctly"""
-        result = self.parser.clean_text(input_text)
+        result = parser.clean_text(input_text)
         assert result == expected_result
     
     @pytest.mark.parametrize(
@@ -111,9 +111,9 @@ class TestParser:
             ("  A  ", "A")  # Single character with whitespace
         ]
     )
-    def test_clean_text_empty_and_special_cases(self, input_text, expected_result):
+    def test_clean_text_empty_and_special_cases(self, parser, input_text, expected_result):
         """Test clean_text with empty and special cases"""
-        result = self.parser.clean_text(input_text)
+        result = parser.clean_text(input_text)
         assert result == expected_result
 
 
@@ -161,14 +161,10 @@ class TestParserAbstractMethods:
 class TestParserUtilityMethods:
     """Test utility methods behavior in different scenarios"""
     
-    def setup_method(self):
-        """Set up test fixtures"""
-        self.parser = ReviewParser("https://platypus1917.org/platypus-review/")
-    
-    def test_create_soup_with_malformed_html(self):
+    def test_create_soup_with_malformed_html(self, parser):
         """Test create_soup handles malformed HTML gracefully"""
         malformed_html = "<html><body><p>Unclosed paragraph<div>Mixed tags</p></div></body></html>"
-        soup = self.parser.create_soup(malformed_html)
+        soup = parser.create_soup(malformed_html)
         
         # BeautifulSoup should parse it without crashing
         assert isinstance(soup, BeautifulSoup)
@@ -186,9 +182,9 @@ class TestParserUtilityMethods:
             ("<p>Text</p>", True),  # Fragment without html tag
         ]
     )
-    def test_create_soup_with_empty_html(self, html_input, expected_result):
+    def test_create_soup_with_empty_html(self, parser, html_input, expected_result):
         """Test create_soup with empty or minimal HTML"""
-        soup = self.parser.create_soup(html_input)
+        soup = parser.create_soup(html_input)
         assert isinstance(soup, BeautifulSoup) == expected_result
         
         # Additional checks for non-empty HTML
@@ -207,9 +203,9 @@ class TestParserUtilityMethods:
             ("https://example.com", "//other.com/path", "//other.com/path"),  # Protocol-relative URL (returns as-is)
         ]
     )
-    def test_normalize_url_edge_cases(self, base_url, test_url, expected_result):
+    def test_normalize_url_edge_cases(self, parser, base_url, test_url, expected_result):
         """Test normalize_url with edge cases"""
-        result = self.parser.normalize_url(test_url, base_url)
+        result = parser.normalize_url(test_url, base_url)
         assert result == expected_result
     
     @pytest.mark.parametrize(
@@ -224,9 +220,9 @@ class TestParserUtilityMethods:
             ("مرحبا بالعالم", "مرحبا بالعالم"),  # Arabic
         ]
     )
-    def test_clean_text_unicode_handling(self, input_text, expected_result):
+    def test_clean_text_unicode_handling(self, parser, input_text, expected_result):
         """Test clean_text with Unicode characters"""
-        result = self.parser.clean_text(input_text)
+        result = parser.clean_text(input_text)
         assert result == expected_result
     
     @pytest.mark.parametrize(
@@ -242,6 +238,10 @@ class TestParserUtilityMethods:
             ("Math: 2 + 2 = 4", "Math: 2 + 2 = 4"),  # Mathematical expressions
         ]
     )
+    def test_clean_text_preserves_meaningful_content(self, parser, input_text, expected_result):
+        """Test that clean_text preserves meaningful content"""
+        result = parser.clean_text(input_text)
+        assert result == expected_result
     def test_clean_text_preserves_meaningful_content(self, input_text, expected_result):
         """Test that clean_text preserves meaningful content"""
         result = self.parser.clean_text(input_text)

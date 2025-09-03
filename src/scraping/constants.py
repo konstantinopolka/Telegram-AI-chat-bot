@@ -17,4 +17,5 @@ REQUIRED_FIELDS = ['title', 'content', 'original_url']
 # Minimum title length for validation
 MIN_TITLE_LENGTH = 5
 
+# Minimum content length for validation
 MIN_CONTENT_LENGTH = 100
