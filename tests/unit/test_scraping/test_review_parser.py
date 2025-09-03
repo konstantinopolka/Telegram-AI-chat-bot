@@ -708,22 +708,3 @@ class TestReviewParserAbstractMethodImplementation:
         # clean_content_for_publishing should return string
         result = simple_parser.clean_content_for_publishing(soup)
         assert isinstance(result, str)
-        # extract_title should return string
-        result = self.parser.extract_title(soup)
-        assert isinstance(result, str)
-        
-        # extract_metadata should return dict
-        with patch.object(self.parser, '_extract_authors') as mock_authors, \
-             patch.object(self.parser, '_extract_date') as mock_date, \
-             patch.object(self.parser, '_extract_id') as mock_id:
-            
-            mock_authors.return_value = []
-            mock_date.return_value = ""
-            mock_id.return_value = 123
-            
-            result = self.parser.extract_metadata(soup)
-            assert isinstance(result, dict)
-        
-        # clean_content_for_publishing should return string
-        result = self.parser.clean_content_for_publishing(soup)
-        assert isinstance(result, str)

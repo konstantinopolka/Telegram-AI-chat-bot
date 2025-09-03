@@ -200,7 +200,7 @@ class TestParserUtilityMethods:
             ("https://example.com", "?param=value", "?param=value"),  # Query parameters (returns as-is)
             ("https://example.com", "javascript:void(0)", "javascript:void(0)"),  # JavaScript URL (returns as-is)
             ("https://example.com/path", "/new-path", "https://example.com/new-path"),  # Absolute path
-            ("https://example.com", "//other.com/path", "//other.com/path"),  # Protocol-relative URL (returns as-is)
+            ("https://example.com", "//other.com/path", "https://other.com/path"),  # Protocol-relative URL (resolved by urljoin)
         ]
     )
     def test_normalize_url_edge_cases(self, parser, base_url, test_url, expected_result):
@@ -241,8 +241,4 @@ class TestParserUtilityMethods:
     def test_clean_text_preserves_meaningful_content(self, parser, input_text, expected_result):
         """Test that clean_text preserves meaningful content"""
         result = parser.clean_text(input_text)
-        assert result == expected_result
-    def test_clean_text_preserves_meaningful_content(self, input_text, expected_result):
-        """Test that clean_text preserves meaningful content"""
-        result = self.parser.clean_text(input_text)
         assert result == expected_result

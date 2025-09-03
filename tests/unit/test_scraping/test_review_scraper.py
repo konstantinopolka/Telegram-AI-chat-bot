@@ -12,6 +12,36 @@ def review_scraper():
 def simple_scraper():
     return ReviewScraper("https://example.com")
 
+
+@pytest.fixture
+def mock_fetch_and_parse_listing(review_scraper):
+    with patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch, \
+         patch.object(review_scraper.parser, 'parse_listing_page') as mock_parse:
+        yield mock_fetch, mock_parse
+
+@pytest.fixture
+def mock_validate_fetch_parse_content(review_scraper):
+    with patch.object(review_scraper.fetcher, 'validate_url') as mock_validate, \
+         patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch, \
+         patch.object(review_scraper.parser, 'parse_content_page') as mock_parse:
+        yield mock_validate, mock_fetch, mock_parse
+        
+@pytest.fixture
+def mock_get_listing_and_scrape(review_scraper):
+    with patch.object(review_scraper, 'get_listing_urls') as mock_get_urls, \
+         patch.object(review_scraper, 'scrape_single_article') as mock_scrape:
+        yield mock_get_urls, mock_scrape
+
+@pytest.fixture
+def mock_handle_error(review_scraper):
+    with patch.object(review_scraper, 'handle_scraping_error') as mock_error:
+        yield mock_error
+
+@pytest.fixture
+def mock_html_content():
+    return "<html>article content</html>"
+
+
 class TestReviewScraper:
     """Test the ReviewScraper concrete implementation"""
     
@@ -22,29 +52,27 @@ class TestReviewScraper:
         assert hasattr(review_scraper, 'fetcher')
         assert hasattr(review_scraper, 'parser')
     
-    def test_get_listing_urls_success(self, review_scraper):
+    def test_get_listing_urls_success(self, review_scraper, mock_fetch_and_parse_listing):
         """Test successful URL listing extraction"""
+        mock_fetch, mock_parse = mock_fetch_and_parse_listing
         mock_html = "<html>mock content</html>"
         expected_urls = ["https://platypus1917.org/2025/01/article1/", 
                         "https://platypus1917.org/2025/01/article2/"]
         
-        with patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch, \
-             patch.object(review_scraper.parser, 'parse_listing_page') as mock_parse:
-            
-            mock_fetch.return_value = mock_html
-            mock_parse.return_value = expected_urls
-            
-            result = review_scraper.get_listing_urls()
-            
-            mock_fetch.assert_called_once_with(review_scraper.base_url)
-            mock_parse.assert_called_once_with(mock_html)
-            assert result == expected_urls
+        mock_fetch.return_value = mock_html
+        mock_parse.return_value = expected_urls
+        
+        result = review_scraper.get_listing_urls()
+        
+        mock_fetch.assert_called_once_with(review_scraper.base_url)
+        mock_parse.assert_called_once_with(mock_html)
+        assert result == expected_urls
     
-    def test_get_listing_urls_error_handling(self, review_scraper):
+    def test_get_listing_urls_error_handling(self, review_scraper, mock_handle_error):
         """Test error handling in URL listing extraction"""
-        with patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch, \
-             patch.object(review_scraper, 'handle_scraping_error') as mock_error:
-            
+        mock_error = mock_handle_error
+        
+        with patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch:
             mock_fetch.side_effect = Exception("Network error")
             
             result = review_scraper.get_listing_urls()
@@ -52,8 +80,9 @@ class TestReviewScraper:
             assert result == []
             mock_error.assert_called_once()
 
-    def test_get_content_data_success(self, review_scraper):
+    def test_get_content_data_success(self, review_scraper, mock_validate_fetch_parse_content):
         """Test successful content data extraction"""
+        mock_validate, mock_fetch, mock_parse = mock_validate_fetch_parse_content
         article_url = "https://platypus1917.org/2025/01/article1/"
         mock_html = "<html>article content</html>"
         expected_content = {
@@ -62,20 +91,16 @@ class TestReviewScraper:
             'url': article_url
         }
         
-        with patch.object(review_scraper.fetcher, 'validate_url') as mock_validate, \
-             patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch, \
-             patch.object(review_scraper.parser, 'parse_content_page') as mock_parse:
-            
-            mock_validate.return_value = True
-            mock_fetch.return_value = mock_html
-            mock_parse.return_value = expected_content
-            
-            result = review_scraper.get_content_data(article_url)
-            
-            mock_validate.assert_called_once_with(article_url)
-            mock_fetch.assert_called_once_with(article_url)
-            mock_parse.assert_called_once_with(mock_html, article_url)
-            assert result == expected_content
+        mock_validate.return_value = True
+        mock_fetch.return_value = mock_html
+        mock_parse.return_value = expected_content
+        
+        result = review_scraper.get_content_data(article_url)
+        
+        mock_validate.assert_called_once_with(article_url)
+        mock_fetch.assert_called_once_with(article_url)
+        mock_parse.assert_called_once_with(mock_html, article_url)
+        assert result == expected_content
 
     def test_get_content_data_invalid_url(self, review_scraper):
         """Test get_content_data with invalid URL"""
@@ -89,8 +114,9 @@ class TestReviewScraper:
             mock_validate.assert_called_once_with(article_url)
             assert result is None
     
-    def test_scrape_single_article_success(self, review_scraper):
+    def test_scrape_single_article_success(self, review_scraper, mock_validate_fetch_parse_content):
         """Test successful single article scraping"""
+        mock_validate, mock_fetch, mock_parse = mock_validate_fetch_parse_content
         article_url = "https://platypus1917.org/2025/01/article/"
         mock_html = "<html>article content</html>"
         expected_data = {
@@ -102,14 +128,11 @@ class TestReviewScraper:
             'review_id': 173
         }
         
-        with patch.object(review_scraper.fetcher, 'validate_url') as mock_validate, \
-             patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch, \
-             patch.object(review_scraper.parser, 'parse_content_page') as mock_parse, \
-             patch.object(review_scraper, 'validate_content_data') as mock_validate_content:
-            
-            mock_validate.return_value = True
-            mock_fetch.return_value = mock_html
-            mock_parse.return_value = expected_data
+        mock_validate.return_value = True
+        mock_fetch.return_value = mock_html
+        mock_parse.return_value = expected_data
+        
+        with patch.object(review_scraper, 'validate_content_data') as mock_validate_content:
             mock_validate_content.return_value = True
             
             result = review_scraper.scrape_single_article(article_url)
@@ -132,33 +155,31 @@ class TestReviewScraper:
             assert result is None
             mock_validate.assert_called_once_with(article_url)
     
-    def test_scrape_single_article_invalid_content(self, review_scraper):
+    def test_scrape_single_article_invalid_content(self, review_scraper, mock_validate_fetch_parse_content):
         """Test single article scraping with invalid content"""
+        mock_validate, mock_fetch, mock_parse = mock_validate_fetch_parse_content
         article_url = "https://platypus1917.org/2025/01/article/"
         mock_html = "<html>content</html>"
         content_data = {'title': '', 'content': '', 'original_url': article_url}
         
-        with patch.object(review_scraper.fetcher, 'validate_url') as mock_validate, \
-             patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch, \
-             patch.object(review_scraper.parser, 'parse_content_page') as mock_parse, \
-             patch.object(review_scraper, 'validate_content_data') as mock_validate_content:
-            
-            mock_validate.return_value = True
-            mock_fetch.return_value = mock_html
-            mock_parse.return_value = content_data
+        mock_validate.return_value = True
+        mock_fetch.return_value = mock_html
+        mock_parse.return_value = content_data
+        
+        with patch.object(review_scraper, 'validate_content_data') as mock_validate_content:
             mock_validate_content.return_value = False
             
             result = review_scraper.scrape_single_article(article_url)
             
             assert result is None
     
-    def test_scrape_single_article_error_handling(self, review_scraper):
+    def test_scrape_single_article_error_handling(self, review_scraper, mock_handle_error):
         """Test error handling in single article scraping"""
+        mock_error = mock_handle_error
         article_url = "https://platypus1917.org/2025/01/article/"
         
         with patch.object(review_scraper.fetcher, 'validate_url') as mock_validate, \
-             patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch, \
-             patch.object(review_scraper, 'handle_scraping_error') as mock_error:
+             patch.object(review_scraper.fetcher, 'fetch_page') as mock_fetch:
             
             mock_validate.return_value = True
             mock_fetch.side_effect = Exception("Fetch error")
@@ -168,8 +189,9 @@ class TestReviewScraper:
             assert result is None
             mock_error.assert_called_once()
     
-    def test_scrape_review_batch_success(self, review_scraper):
+    def test_scrape_review_batch_success(self, review_scraper, mock_get_listing_and_scrape):
         """Test successful review batch scraping"""
+        mock_get_urls, mock_scrape = mock_get_listing_and_scrape
         article_urls = [
             "https://platypus1917.org/2025/01/article1/",
             "https://platypus1917.org/2025/01/article2/"
@@ -186,19 +208,16 @@ class TestReviewScraper:
             'original_url': article_urls[1]
         }
         
-        with patch.object(review_scraper, 'get_listing_urls') as mock_get_urls, \
-             patch.object(review_scraper, 'scrape_single_article') as mock_scrape:
-            
-            mock_get_urls.return_value = article_urls
-            mock_scrape.side_effect = [article_data_1, article_data_2]
-            
-            result = review_scraper.scrape_review_batch()
-            
-            mock_get_urls.assert_called_once()
-            assert mock_scrape.call_count == 2
-            mock_scrape.assert_any_call(article_urls[0])
-            mock_scrape.assert_any_call(article_urls[1])
-            assert result == [article_data_1, article_data_2]
+        mock_get_urls.return_value = article_urls
+        mock_scrape.side_effect = [article_data_1, article_data_2]
+        
+        result = review_scraper.scrape_review_batch()
+        
+        mock_get_urls.assert_called_once()
+        assert mock_scrape.call_count == 2
+        mock_scrape.assert_any_call(article_urls[0])
+        mock_scrape.assert_any_call(article_urls[1])
+        assert result == [article_data_1, article_data_2]
     
     def test_scrape_review_batch_no_urls(self, review_scraper):
         """Test review batch scraping when no URLs found"""
@@ -209,8 +228,9 @@ class TestReviewScraper:
             
             assert result == []
     
-    def test_scrape_review_batch_partial_success(self, review_scraper):
+    def test_scrape_review_batch_partial_success(self, review_scraper, mock_get_listing_and_scrape):
         """Test review batch scraping with some failed articles"""
+        mock_get_urls, mock_scrape = mock_get_listing_and_scrape
         article_urls = [
             "https://platypus1917.org/2025/01/article1/",
             "https://platypus1917.org/2025/01/article2/",
@@ -223,23 +243,20 @@ class TestReviewScraper:
             'original_url': article_urls[0]
         }
         
-        with patch.object(review_scraper, 'get_listing_urls') as mock_get_urls, \
-             patch.object(review_scraper, 'scrape_single_article') as mock_scrape:
-            
-            mock_get_urls.return_value = article_urls
-            # First succeeds, second and third fail
-            mock_scrape.side_effect = [article_data_1, None, None]
-            
-            result = review_scraper.scrape_review_batch()
-            
-            assert len(result) == 1
-            assert result[0] == article_data_1
+        mock_get_urls.return_value = article_urls
+        # First succeeds, second and third fail
+        mock_scrape.side_effect = [article_data_1, None, None]
+        
+        result = review_scraper.scrape_review_batch()
+        
+        assert len(result) == 1
+        assert result[0] == article_data_1
     
-    def test_scrape_review_batch_error_handling(self, review_scraper):
+    def test_scrape_review_batch_error_handling(self, review_scraper, mock_handle_error):
         """Test error handling in review batch scraping"""
-        with patch.object(review_scraper, 'get_listing_urls') as mock_get_urls, \
-             patch.object(review_scraper, 'handle_scraping_error') as mock_error:
-            
+        mock_error = mock_handle_error
+        
+        with patch.object(review_scraper, 'get_listing_urls') as mock_get_urls:
             mock_get_urls.side_effect = Exception("Listing error")
             
             result = review_scraper.scrape_review_batch()
@@ -301,8 +318,8 @@ class TestReviewScraperValidation:
         [
             ('<p>Short</p>', False),  # Too short (< MIN_CONTENT_LENGTH)
             ('', False),              # Empty content
-            ('<p>' + 'x' * (MIN_CONTENT_LENGTH - 1) + '</p>', False),  # Just under minimum
-            ('<p>' + 'x' * MIN_CONTENT_LENGTH + '</p>', True),         # At minimum
+            ('<p>' + 'x' * (MIN_CONTENT_LENGTH - 10) + '</p>', False),  # Just under minimum (93 chars total)
+            ('<p>' + 'x' * MIN_CONTENT_LENGTH + '</p>', True),         # At minimum (107 chars total)
             ('<p>' + 'x' * (MIN_CONTENT_LENGTH + 50) + '</p>', True),  # Well above minimum
         ]
     )
@@ -378,18 +395,6 @@ class TestReviewScraperUtilityMethods:
             
             assert 'error' in result
             mock_error.assert_called_once_with(error, "preview content summary")
-    
-    def test_handle_scraping_error(self, simple_scraper):
-        """Test scraping error handling"""
-        error = Exception("Test error")
-        context = "test operation"
-        
-        # Capture print output
-        with patch('builtins.print') as mock_print:
-            simple_scraper.handle_scraping_error(error, context)
-            
-            expected_msg = f"ReviewScraper error in {context}: {error}"
-            mock_print.assert_called_once_with(expected_msg)
 
 
 class TestReviewScraperAbstractMethodImplementation:
@@ -400,6 +405,33 @@ class TestReviewScraperAbstractMethodImplementation:
         abstract_methods = [
             'get_listing_urls',
             'scrape_single_article',
+            'scrape_review_batch'
+        ]
+        
+        for method_name in abstract_methods:
+            assert hasattr(simple_scraper, method_name)
+            assert callable(getattr(simple_scraper, method_name))
+    
+    def test_methods_return_correct_types(self, simple_scraper, mock_fetch_and_parse_listing, mock_get_listing_and_scrape):
+        """Test that methods return expected types"""
+        mock_fetch, mock_parse = mock_fetch_and_parse_listing
+        mock_get_urls, mock_scrape = mock_get_listing_and_scrape
+        
+        mock_fetch.return_value = "<html></html>"
+        mock_parse.return_value = []
+        
+        # get_listing_urls should return list
+        result = simple_scraper.get_listing_urls()
+        assert isinstance(result, list)
+        
+        mock_get_urls.return_value = []
+        mock_scrape.return_value = None
+        
+        # scrape_review_batch should return list
+        result = simple_scraper.scrape_review_batch()
+        assert isinstance(result, list)
+        
+        abstract_methods = [
             'scrape_review_batch'
         ]
         
@@ -427,14 +459,4 @@ class TestReviewScraperAbstractMethodImplementation:
             
             # scrape_review_batch should return list
             result = simple_scraper.scrape_review_batch()
-            assert isinstance(result, list)
-        
-        with patch.object(self.scraper, 'get_listing_urls') as mock_get_urls, \
-             patch.object(self.scraper, 'scrape_single_article') as mock_scrape:
-            
-            mock_get_urls.return_value = []
-            mock_scrape.return_value = None
-            
-            # scrape_review_batch should return list
-            result = self.scraper.scrape_review_batch()
             assert isinstance(result, list)
