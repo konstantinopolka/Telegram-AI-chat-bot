@@ -87,3 +87,6 @@ Desktop.ini
 */__pycache__
 
 docker-data/
+
+mutants/
+*.cfg
