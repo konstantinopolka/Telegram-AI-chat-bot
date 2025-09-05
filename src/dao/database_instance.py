@@ -4,9 +4,10 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-
 from sqlalchemy.orm import declarative_base
 Base = declarative_base()
+
+import src.dao.models 
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///dev.db")

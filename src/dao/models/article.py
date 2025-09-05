@@ -15,8 +15,8 @@ class Article(Base):
     telegraph_urls = Column(JSON, default=list)  # URLs after publishing
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=timezone.utc), onupdate=lambda: datetime.now(tz=timezone.utc))
+    authors = Column(JSON, default=list)
     
     def __repr__(self):
         return f"<Article(id={self.id}, title='{self.title}', review_id={self.review_id})>"
-
-
+    
