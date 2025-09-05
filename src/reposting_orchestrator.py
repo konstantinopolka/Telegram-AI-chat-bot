@@ -14,9 +14,7 @@ class RepostingOrchestrator:
         """
         Full workflow for processing a batch of reviews:
         1. Scrape articles from review site
-        2. Create Telegraph articles
-        3. Save metadata to DB
-        4. Post to channel
+        2. Process all articles from the scraped review
         """
         try:
             # 1. Scrape all articles from review site
@@ -27,37 +25,9 @@ class RepostingOrchestrator:
                 print("No articles found to process")
                 return []
             
-            processed_articles = []
-            
-            # 2. Process each article
-            for article_data in articles_data:
-                try:
-                    # Create Telegraph article(s)
-                    print(f"Step 2: Creating Telegraph article for '{article_data['title']}'...")
-                    telegraph_urls = await self.telegraph.create_article(article_data)
-                    
-                    if telegraph_urls:
-                        # Add Telegraph URLs to article data
-                        article_data['telegraph_urls'] = telegraph_urls
-                        
-                        # 3. Save to database
-                        print("Step 3: Saving to database...")
-                        # TODO: Save Article object to database
-                        # article_obj = Article(**article_data)
-                        # self.db.add(article_obj)
-                        # self.db.commit()
-                        
-                        # 4. Post to channel
-                        print("Step 4: Posting to channel...")
-                        # TODO: Post to Telegram channel
-                        # await self.channel.post_article(article_data)
-                        
-                        processed_articles.append(article_data)
-                        print(f"Successfully processed: {article_data['title']}")
-                    
-                except Exception as e:
-                    print(f"Error processing article '{article_data.get('title', 'Unknown')}': {e}")
-                    continue
+            # 2. Process all articles
+            print("Step 2: Processing all articles...")
+            processed_articles = await self.process_articles(articles_data)
             
             print(f"Batch processing complete. Processed {len(processed_articles)} articles.")
             return processed_articles
@@ -66,21 +36,35 @@ class RepostingOrchestrator:
             print(f"Error in batch processing: {e}")
             return []
 
-    async def process_single_article(self, article_url: str) -> Dict[str, Any]:
+    async def process_articles(self, articles_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Process a single article by URL:
-        1. Scrape single article
-        2. Create Telegraph article
-        3. Save to DB
-        4. Post to channel
+        Process multiple articles by calling process_single_article for each one.
+        """
+        processed_articles = []
+        
+        for article_data in articles_data:
+            try:
+                processed_article = await self.process_single_article(article_data)
+                if processed_article:  # Only add if processing was successful
+                    processed_articles.append(processed_article)
+                    
+            except Exception as e:
+                print(f"Error processing article '{article_data.get('title', 'Unknown')}': {e}")
+                continue
+        
+        return processed_articles
+
+    async def process_single_article(self, article_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process a single article with already scraped data:
+        1. Create Telegraph article
+        2. Save to DB
+        3. Post to channel
         """
         try:
-            # 1. Scrape single article
-            print(f"Scraping single article: {article_url}")
-            article_data = self.scraper.scrape_single_article(article_url)
-            
+            # 1. Check article_data
             if not article_data:
-                print(f"Failed to scrape article from {article_url}")
+                print(f"No article data provided")
                 return {}
             
             # 2. Create Telegraph article
@@ -92,11 +76,15 @@ class RepostingOrchestrator:
                 
                 # 3. Save to database
                 print("Saving to database...")
-                # TODO: Implement database saving
+                # TODO: Save Article object to database
+                # article_obj = Article(**article_data)
+                # self.db.add(article_obj)
+                # self.db.commit()
                 
                 # 4. Post to channel
                 print("Posting to channel...")
-                # TODO: Implement channel posting
+                # TODO: Post to Telegram channel
+                # await self.channel.post_article(article_data)
                 
                 print(f"Successfully processed single article: {article_data['title']}")
                 return article_data
@@ -105,7 +93,7 @@ class RepostingOrchestrator:
                 return {}
                 
         except Exception as e:
-            print(f"Error processing single article {article_url}: {e}")
+            print(f"Error processing single article '{article_data.get('title', 'Unknown')}': {e}")
             return {}
 
     async def preview_available_content(self) -> Dict[str, Any]:
