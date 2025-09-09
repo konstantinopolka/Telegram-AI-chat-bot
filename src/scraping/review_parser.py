@@ -45,6 +45,15 @@ class ReviewParser(Parser):
             **self.extract_metadata(soup)
         }
         
+    def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
+        """Extract metadata from Platypus article"""
+        metadata = {
+            'authors': self._extract_authors(soup),
+            'published_date': self._extract_date(soup),
+        }
+        return metadata
+
+        
     def extract_review_id(self, html: str) -> int:
         """Extract review ID from HTML span or URL"""
         
@@ -68,15 +77,6 @@ class ReviewParser(Parser):
         # Final fallback
         return hash(self.base_url) % 1000000
     
-    def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
-    #TO-DO
-    
-        """Extract metadata from Platypus article"""
-        metadata = {
-            'authors': self._extract_authors(soup),
-            'published_date': self._extract_date(soup),
-        }
-        return metadata
 
     def extract_title(self, soup: BeautifulSoup) -> str:
         """Extract title from Platypus article"""

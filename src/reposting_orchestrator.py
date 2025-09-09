@@ -15,7 +15,8 @@ class RepostingOrchestrator:
         """
         Full workflow for processing a batch of reviews:
         1. Scrape articles from review site
-        2. Process all articles from the scraped review
+        2. Create validated schemas from raw data
+        3. Process all articles from the scraped review
         """
         try:
             # 1. Scrape all articles from review site
@@ -26,13 +27,23 @@ class RepostingOrchestrator:
                 print("No articles found to process")
                 return None
             
-            # 2. Convert raw data to validated schema
-            print("Step 2: Creating validated review schema...")
-            review_schema = ReviewSchema.from_raw_data(raw_review_data)
-            
+
+     
             # 3. Process all articles
-            print("Step 3: Processing all articles...")
-            processed_articles = await self.process_articles(review_schema.articles)
+            print("Step 4: Processing all articles...")
+            processed_articles = await self.process_articles(raw_review_data)
+            
+            
+            # 3. Create review schema
+            review_schema = ReviewSchema(
+                id=raw_review_data.get('review_id'),
+                source_url=raw_review_data['source_url'],
+                articles=processed_articles,
+                created_at=raw_review_data.get('created_at')
+            )
+            
+            # TO-DO: 3. Save review in database 
+            
             
             print(f"Batch processing complete. Processed {len(processed_articles)} articles.")
             return review_schema
@@ -41,23 +52,26 @@ class RepostingOrchestrator:
             print(f"Error in batch processing: {e}")
             return None
 
-    async def process_articles(self, articles: List[ArticleSchema]) -> List[ArticleSchema]:
+
+
+    async def process_articles(self, raw_review_data: Dict[str, Any]) -> List[ArticleSchema]:
         """
         Process multiple articles by calling process_single_article for each one.
         """
-        processed_articles = []
         
-        for article_schema in articles:
+        # 2. Create article schemas from raw data
+        print("Step 2: Creating validated article schemas...")
+        article_schemas = self._create_article_schemas(raw_review_data)
+        
+        for article_schema in article_schemas:
             try:
-                processed_article = await self.process_single_article(article_schema)
-                if processed_article:  # Only add if processing was successful
-                    processed_articles.append(processed_article)
+                article_schema = await self.process_single_article(article_schema)
                     
             except Exception as e:
                 print(f"Error processing article '{article_schema.title}': {e}")
                 continue
         
-        return processed_articles
+        return article_schemas
 
     async def process_single_article(self, article_schema: ArticleSchema) -> ArticleSchema:
         """
@@ -73,7 +87,7 @@ class RepostingOrchestrator:
                 return None
             
             # 2. Convert to dict for Telegraph API
-            article_data = article_schema.dict()
+            article_data = article_schema.model_dump()
             
             # 3. Create Telegraph article
             print(f"Creating Telegraph article for '{article_schema.title}'...")
@@ -114,3 +128,31 @@ class RepostingOrchestrator:
         except Exception as e:
             print(f"Error previewing content: {e}")
             return {'error': str(e)}
+
+
+    def _create_article_schemas(self, raw_review_data: Dict[str, Any]) -> List[ArticleSchema]:
+        """
+        Create ArticleSchema instances from raw scraped data.
+        
+        Args:
+            raw_review_data: Dict containing 'articles' list and 'review_id'
+            
+        Returns:
+            List of validated ArticleSchema instances
+        """
+        article_schemas = []
+        review_id = raw_review_data.get('review_id')
+        
+        for article_dict in raw_review_data.get('articles', []):
+            try:
+                # Add review_id to each article if not already present
+                if 'review_id' not in article_dict:
+                    article_dict['review_id'] = review_id
+                    
+                article_schema = ArticleSchema(**article_dict)
+                article_schemas.append(article_schema)
+            except Exception as e:
+                print(f"Failed to create article schema: {e}")
+                continue
+                
+        return article_schemas
