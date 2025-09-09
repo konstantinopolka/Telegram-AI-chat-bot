@@ -44,6 +44,29 @@ class ReviewParser(Parser):
             'original_url': url,
             **self.extract_metadata(soup)
         }
+        
+    def parse_review_id(self, html: str) -> int:
+        """Extract review ID from HTML span or URL"""
+        
+        # Method 1: Try HTML span first
+        soup = self.create_soup(html)
+        span = soup.select_one('span.selected')
+        if span:
+            text = span.get_text(strip=True)
+            import re
+            match = re.search(r'Issue #(\d+)', text)
+            if match:
+                return int(match.group(1))
+        
+        # Method 2: Fallback to base_url if it contains the pattern
+        if hasattr(self, 'base_url') and self.base_url:
+            import re
+            match = re.search(r'/issue-(\d+)/?', self.base_url)
+            if match:
+                return int(match.group(1))
+        
+        # Final fallback
+        return hash(self.base_url) % 1000000
     
     def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
     #TO-DO
@@ -52,7 +75,6 @@ class ReviewParser(Parser):
         metadata = {
             'authors': self._extract_authors(soup),
             'published_date': self._extract_date(soup),
-            'review_id': self._extract_id(soup)
         }
         return metadata
 
@@ -129,19 +151,5 @@ class ReviewParser(Parser):
             return date_elem.get('datetime') or self.clean_text(date_elem.get_text())
         return ""
     
-    def _extract_id(self, soup: BeautifulSoup) -> int:
-        """Extract review id from Platypus Review number"""
-        container = soup.select_one('.bpf-content .has-text-align-right')
-        if container:
-            text = container.get_text(strip=True)
-            print(f"text is {text}")
-            # Look for pattern like "Platypus Review 173" or "Platypus Review173"
-            import re
-            match = re.search(r'Platypus Review\s*(\d+)', text)
-            if match:
-                return int(match.group(1))
-        
-        # Fallback: generate ID from URL hash
-        return hash(self.base_url) % 1000000
 
 

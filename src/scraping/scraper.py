@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 from .constants import REQUIRED_FIELDS
-from src.dao.models import Article, Review
+from src.schemas import ArticleSchema, ReviewSchema
 
 class Scraper(ABC):
     """

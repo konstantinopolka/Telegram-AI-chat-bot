@@ -15,6 +15,8 @@ class ReviewScraper(Scraper):
         self.base_url = base_url
         self.fetcher = ReviewFetcher(base_url)
         self.parser = ReviewParser(base_url)
+        
+
     
     def get_listing_urls(self) -> List[str]:
         """
@@ -42,6 +44,15 @@ class ReviewScraper(Scraper):
         content_data = self.parser.parse_content_page(html, article_url)
         return content_data
 
+    def get_review_id(self) -> int:
+        
+        try:
+            html = self.fetcher.fetch_page(self.base_url)
+            return self.parser.extract_review_id(html)
+        except Exception as e:
+            self.handle_scraping_error(e, "getting listing URLs")
+            return []
+    
     def scrape_single_article(self, article_url: str) -> Optional[Article]:
         """
         Scrape a single article by URL.
@@ -66,7 +77,7 @@ class ReviewScraper(Scraper):
             self.handle_scraping_error(e, f"scraping single article {article_url}")
             return None
         
-    def scrape_review_batch(self) -> Review:
+    def scrape_review_batch(self) -> Dict[str, Any]:
         """
         Main scraping method: scrape all review articles.
         Workflow:
@@ -90,7 +101,11 @@ class ReviewScraper(Scraper):
             
             print(f"Successfully scraped {len(scraped_articles)} articles")
             # 1.3 Return list of dictionaries representing review as a list of articles
-            return scraped_articles
+            return {
+                "source_url": self.base_url,
+                "articles" : scraped_articles,
+                
+            }
             
         except Exception as e:
             self.handle_scraping_error(e, "review batch scraping")
