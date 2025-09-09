@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 from .constants import REQUIRED_FIELDS
-from src.schemas import ArticleSchema, ReviewSchema
+
 
 class Scraper(ABC):
     """
@@ -18,7 +18,7 @@ class Scraper(ABC):
         pass
     
     @abstractmethod
-    def scrape_single_article(self, article_url: str) -> Optional[Article]:
+    def scrape_single_article(self, article_url: str) -> Optional[Dict[str, any]]:
         """
         Scrape a single article by URL.
         Complete workflow: fetch → parse → validate → return article data.
@@ -27,7 +27,7 @@ class Scraper(ABC):
         pass
     
     @abstractmethod
-    def scrape_review_batch(self) -> Review:
+    def scrape_review_batch(self) -> Dict[str, any]:
         """
         Scrape a batch of reviews/articles from the main page.
         This is the main method that orchestrates the full scraping process.

@@ -44,16 +44,16 @@ class ReviewScraper(Scraper):
         content_data = self.parser.parse_content_page(html, article_url)
         return content_data
 
-    def get_review_id(self) -> int:
-        
+    def get_review_id(self) -> Optional[int]:
+        """Get review ID, returns None if extraction fails"""
         try:
             html = self.fetcher.fetch_page(self.base_url)
             return self.parser.extract_review_id(html)
         except Exception as e:
-            self.handle_scraping_error(e, "getting listing URLs")
-            return []
+            self.handle_scraping_error(e, "getting review ID")
+            return None
     
-    def scrape_single_article(self, article_url: str) -> Optional[Article]:
+    def scrape_single_article(self, article_url: str) -> Optional[Dict[str, Any]]:
         """
         Scrape a single article by URL.
         Complete workflow: fetch → parse → validate → return article data.
@@ -88,7 +88,10 @@ class ReviewScraper(Scraper):
         try:
             print(f"Starting review batch scraping from {self.base_url}")
             
-            # 1.1 Get URLs of each article
+            # 1.1 Get the id of a review
+            review_id = self.get_review_id()
+            
+            # 1.2 Get URLs of each article
             article_urls = self.get_listing_urls()
             if not article_urls:
                 print("No article URLs found on listing page")
@@ -96,15 +99,15 @@ class ReviewScraper(Scraper):
             
             print(f"Found {len(article_urls)} articles to scrape")
             
-            # 1.2 Scrape each article
+            # 1.3 Scrape each article
             scraped_articles = [article_data for url in article_urls if (article_data := self.scrape_single_article(url))]
             
             print(f"Successfully scraped {len(scraped_articles)} articles")
-            # 1.3 Return list of dictionaries representing review as a list of articles
+            # 1.4 Return a dictionary representing review as a list of articles
             return {
                 "source_url": self.base_url,
                 "articles" : scraped_articles,
-                
+                "review_id": review_id
             }
             
         except Exception as e:

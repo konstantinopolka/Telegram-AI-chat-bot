@@ -45,7 +45,7 @@ class ReviewParser(Parser):
             **self.extract_metadata(soup)
         }
         
-    def parse_review_id(self, html: str) -> int:
+    def extract_review_id(self, html: str) -> int:
         """Extract review ID from HTML span or URL"""
         
         # Method 1: Try HTML span first
