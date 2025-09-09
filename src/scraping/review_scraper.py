@@ -3,6 +3,8 @@ from .scraper import Scraper
 from .review_fetcher import ReviewFetcher
 from .review_parser import ReviewParser
 from .constants import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH
+from src.dao.models import Article, Review
+
 class ReviewScraper(Scraper):
     """
     Concrete scraper for review websites that combines fetching and parsing.
@@ -40,7 +42,7 @@ class ReviewScraper(Scraper):
         content_data = self.parser.parse_content_page(html, article_url)
         return content_data
 
-    def scrape_single_article(self, article_url: str) -> Optional[Dict[str, Any]]:
+    def scrape_single_article(self, article_url: str) -> Optional[Article]:
         """
         Scrape a single article by URL.
         Complete workflow: fetch → parse → validate → return article data.
@@ -64,7 +66,7 @@ class ReviewScraper(Scraper):
             self.handle_scraping_error(e, f"scraping single article {article_url}")
             return None
         
-    def scrape_review_batch(self) -> List[Dict[str, Any]]:
+    def scrape_review_batch(self) -> Review:
         """
         Main scraping method: scrape all review articles.
         Workflow:

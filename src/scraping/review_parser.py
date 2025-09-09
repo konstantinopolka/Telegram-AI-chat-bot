@@ -45,6 +45,17 @@ class ReviewParser(Parser):
             **self.extract_metadata(soup)
         }
     
+    def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
+    #TO-DO
+    
+        """Extract metadata from Platypus article"""
+        metadata = {
+            'authors': self._extract_authors(soup),
+            'published_date': self._extract_date(soup),
+            'review_id': self._extract_id(soup)
+        }
+        return metadata
+
     def extract_title(self, soup: BeautifulSoup) -> str:
         """Extract title from Platypus article"""
         title_tag = soup.select_one('h1')
@@ -58,17 +69,7 @@ class ReviewParser(Parser):
         
         return self.clean_content_for_publishing(content_div)
     
-    def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
-        #TO-DO
-        
-        """Extract metadata from Platypus article"""
-        metadata = {
-            'authors': self._extract_authors(soup),
-            'published_date': self._extract_date(soup),
-            'review_id': self._extract_id(soup)
-        }
-        return metadata
-    
+
     def clean_content_for_publishing(self, content_div) -> str:
         """Clean HTML content for Telegraph compatibility"""
         content_copy = BeautifulSoup(str(content_div), 'html.parser')
