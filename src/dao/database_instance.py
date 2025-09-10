@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlmodel import SQLModel
 
-# Define naming convention for constraints
+# Define naming convention for constraints BEFORE importing models
 naming_convention = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -15,9 +15,11 @@ naming_convention = {
     "pk": "pk_%(table_name)s"
 }
 
-Base = declarative_base(metadata=MetaData(naming_convention=naming_convention))
+SQLModel.metadata = MetaData(naming_convention=naming_convention)
 
-import src.dao.models 
+# Import models AFTER setting up metadata
+import src.dao.models
+
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///dev.db")

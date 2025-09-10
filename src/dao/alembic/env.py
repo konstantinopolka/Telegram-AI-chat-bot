@@ -4,13 +4,18 @@ from pathlib import Path
 
 from alembic import context
 
-# Add the project root to Python path so we can import our models
+# Add the project root to Python path FIRST
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# Import after adding to path - import both Base and your engine
-# No need for load_dotenv() here since models.py already does it
-from src.dao.database_instance import Base, engine, DATABASE_URL
+# Import after adding to path - this will set up the metadata correctly
+from src.dao.database_instance import engine, DATABASE_URL
+from sqlmodel import SQLModel
+# Import models to ensure they are registered with metadata
+import src.dao.models
+
+target_metadata = SQLModel.metadata
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -23,7 +28,8 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = Base.metadata
+
+
 
 # Set the database URL dynamically from your models.py
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
@@ -67,7 +73,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, render_as_batch=True,
+            connection=connection, 
+            target_metadata=target_metadata, 
+            render_as_batch=True,
         )
 
         with context.begin_transaction():

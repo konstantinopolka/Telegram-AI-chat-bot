@@ -92,3 +92,5 @@ mutants/
 *.cfg
 
 *.db
+
+logs.txt

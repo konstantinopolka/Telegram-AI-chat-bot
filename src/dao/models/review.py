@@ -1,20 +1,19 @@
-from sqlalchemy import Column, Integer, String, DateTime
+#default libraries
+from typing import Optional, List
+
+#third party libraries
 from datetime import datetime, timezone
-from src.dao.database_instance import Base
-from sqlalchemy.orm import relationship
+from sqlmodel import SQLModel, Field, Relationship
 
+#local 
+# from src.dao.models import Article
 
-class Review(Base):
+class Review(SQLModel, table=True):
     __tablename__ = "reviews"
-    
-    id = Column(Integer, primary_key=True)
-    source_url = Column(String(500), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=timezone.utc))
-    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    source_url: str = Field(max_length=500)
+    created_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     # Relationship: one review -> many articles
-    articles = relationship("Article", back_populates="review")
+    articles: Optional[List["Article"]] = Relationship(back_populates="review")
     
-    
-    def __repr__(self):
-        return f"<Review(id={self.id}, title='{self.title}')>"
 
