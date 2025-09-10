@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from src.scraping import ReviewScraper
 from src.telegraph_manager import TelegraphManager
-from src.schemas import ArticleSchema, ReviewSchema
+from src.dao.models import Review, Article
 
 class RepostingOrchestrator:
     def __init__(self, review_scraper: ReviewScraper, telegraph_manager: TelegraphManager, db_session, bot_handler, channel_poster):
@@ -11,7 +11,7 @@ class RepostingOrchestrator:
         self.bot = bot_handler
         self.channel = channel_poster
 
-    async def process_review_batch(self) -> ReviewSchema:
+    async def process_review_batch(self) -> Review:
         """
         Full workflow for processing a batch of reviews:
         1. Scrape articles from review site
@@ -35,7 +35,7 @@ class RepostingOrchestrator:
             
             
             # 3. Create review schema
-            review_schema = ReviewSchema(
+            review_schema = Review(
                 id=raw_review_data.get('review_id'),
                 source_url=raw_review_data['source_url'],
                 articles=processed_articles,
@@ -54,26 +54,26 @@ class RepostingOrchestrator:
 
 
 
-    async def process_articles(self, raw_review_data: Dict[str, Any]) -> List[ArticleSchema]:
+    async def process_articles(self, raw_review_data: Dict[str, Any]) -> List[Article]:
         """
         Process multiple articles by calling process_single_article for each one.
         """
         
         # 2. Create article schemas from raw data
         print("Step 2: Creating validated article schemas...")
-        article_schemas = self._create_article_schemas(raw_review_data)
+        articles = self._create_articles(raw_review_data)
         
-        for article_schema in article_schemas:
+        for article in articles:
             try:
-                article_schema = await self.process_single_article(article_schema)
+                article = await self.process_single_article(article)
                     
             except Exception as e:
-                print(f"Error processing article '{article_schema.title}': {e}")
+                print(f"Error processing article '{article.title}': {e}")
                 continue
         
-        return article_schemas
+        return articles
 
-    async def process_single_article(self, article_schema: ArticleSchema) -> ArticleSchema:
+    async def process_single_article(self, article: Article) -> Article:
         """
         Process a single article with validated schema:
         1. Create Telegraph article
@@ -82,20 +82,20 @@ class RepostingOrchestrator:
         """
         try:
             # 1. Check article_schema
-            if not article_schema:
+            if not article:
                 print(f"No article schema provided")
                 return None
             
             # 2. Convert to dict for Telegraph API
-            article_data = article_schema.model_dump()
+            article_data = article.model_dump()
             
             # 3. Create Telegraph article
-            print(f"Creating Telegraph article for '{article_schema.title}'...")
+            print(f"Creating Telegraph article for '{article.title}'...")
             telegraph_urls = await self.telegraph.create_article(article_data)
             
             if telegraph_urls:
                 # Update the schema with telegraph URLs
-                article_schema.telegraph_urls = telegraph_urls
+                article.telegraph_urls = telegraph_urls
                 
                 # 4. Save to database
                 print("Saving to database...")
@@ -109,14 +109,14 @@ class RepostingOrchestrator:
                 # TODO: Post to Telegram channel
                 # await self.channel.post_article(article_schema.dict())
                 
-                print(f"Successfully processed single article: {article_schema.title}")
-                return article_schema
+                print(f"Successfully processed single article: {article.title}")
+                return article
             else:
                 print("Failed to create Telegraph article")
                 return None
                 
         except Exception as e:
-            print(f"Error processing single article '{article_schema.title if article_schema else 'Unknown'}': {e}")
+            print(f"Error processing single article '{article.title if article else 'Unknown'}': {e}")
             return None
 
     async def preview_available_content(self) -> Dict[str, Any]:
@@ -130,7 +130,7 @@ class RepostingOrchestrator:
             return {'error': str(e)}
 
 
-    def _create_article_schemas(self, raw_review_data: Dict[str, Any]) -> List[ArticleSchema]:
+    def _create_articles(self, raw_review_data: Dict[str, Any]) -> List[Article]:
         """
         Create ArticleSchema instances from raw scraped data.
         
@@ -140,7 +140,7 @@ class RepostingOrchestrator:
         Returns:
             List of validated ArticleSchema instances
         """
-        article_schemas = []
+        articles = []
         review_id = raw_review_data.get('review_id')
         
         for article_dict in raw_review_data.get('articles', []):
@@ -149,10 +149,10 @@ class RepostingOrchestrator:
                 if 'review_id' not in article_dict:
                     article_dict['review_id'] = review_id
                     
-                article_schema = ArticleSchema(**article_dict)
-                article_schemas.append(article_schema)
+                article_schema = Article(**article_dict)
+                articles.append(article_schema)
             except Exception as e:
                 print(f"Failed to create article schema: {e}")
                 continue
                 
-        return article_schemas
+        return articles
