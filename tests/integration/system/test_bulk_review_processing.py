@@ -123,6 +123,70 @@ class PlatypusArchiveExtractor(Parser):
         
 
 
+class TelegraphMappingTracker:
+    """
+    Tracks mapping between review URLs, articles, and Telegraph URLs.
+    Creates a JSON structure: {review_url: {article_title: [telegraph_urls]}}
+    """
+    
+    def __init__(self):
+        self.mapping = {}
+        
+    def add_review_mapping(self, review_url: str, articles: List[Any]):
+        """Add a review with its articles and Telegraph URLs"""
+        if review_url not in self.mapping:
+            self.mapping[review_url] = {}
+            
+        for article in articles:
+            if hasattr(article, '__dict__'):
+                # Handle Article object
+                title = getattr(article, 'title', 'Unknown Title')
+                telegraph_urls = getattr(article, 'telegraph_urls', [])
+            elif isinstance(article, dict):
+                # Handle dict representation
+                title = article.get('title', 'Unknown Title')
+                telegraph_urls = article.get('telegraph_urls', [])
+            else:
+                continue
+                
+            # Ensure telegraph_urls is a list
+            if isinstance(telegraph_urls, str):
+                telegraph_urls = [telegraph_urls]
+            elif not isinstance(telegraph_urls, list):
+                telegraph_urls = []
+                
+            self.mapping[review_url][title] = telegraph_urls
+            
+    def save_mapping(self, file_path: Path):
+        """Save the mapping to a JSON file"""
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(self.mapping, f, indent=2, ensure_ascii=False)
+            
+    def get_mapping(self) -> Dict[str, Dict[str, List[str]]]:
+        """Get the complete mapping"""
+        return self.mapping
+        
+    def get_stats(self) -> Dict[str, Any]:
+        """Get statistics about the mapping"""
+        total_reviews = len(self.mapping)
+        total_articles = sum(len(articles) for articles in self.mapping.values())
+        total_telegraph_urls = sum(
+            len(urls) for articles in self.mapping.values() 
+            for urls in articles.values()
+        )
+        
+        return {
+            'total_reviews': total_reviews,
+            'total_articles': total_articles,
+            'total_telegraph_urls': total_telegraph_urls,
+            'reviews_with_articles': len([r for r in self.mapping.values() if r]),
+            'articles_with_telegraph': len([
+                1 for articles in self.mapping.values() 
+                for urls in articles.values() if urls
+            ])
+        }
+
+
 class BulkProcessingStatistics:
     """Tracks statistics during bulk processing of reviews"""
     
@@ -199,7 +263,7 @@ class BulkProcessingStatistics:
         }
 
 
-class BulkReviewProcessor:
+class TestBulkReviewProcessor:
     """
     Integration tests for bulk review processing.
     Uses RepostingOrchestrator to process multiple reviews with statistics tracking.
@@ -208,6 +272,7 @@ class BulkReviewProcessor:
     def __init__(self):
         self.extractor = PlatypusArchiveExtractor()
         self.stats = BulkProcessingStatistics()
+        self.telegraph_tracker = TelegraphMappingTracker()
         
     async def test_extract_all_review_links(self):
         """Test extraction of all review links from archive"""
@@ -269,6 +334,7 @@ class BulkReviewProcessor:
         telegraph_manager = TelegraphManager(access_token=access_token)
         
         self.stats.reset()
+        self.telegraph_tracker = TelegraphMappingTracker()  # Reset tracker for each test
         processed_reviews = []
         
         for review_url in recent_reviews:
@@ -291,6 +357,9 @@ class BulkReviewProcessor:
                 review_result = await orchestrator.process_review_batch()
                 
                 if review_result:
+                    # Add to Telegraph mapping tracker
+                    self.telegraph_tracker.add_review_mapping(review_url, review_result.articles)
+                    
                     # Convert Article object to dict for statistics
                     review_dict = {
                         'source_url': review_result.source_url,
@@ -335,6 +404,19 @@ class BulkReviewProcessor:
         with open(results_file, 'w', encoding='utf-8') as f:
             json.dump(self.stats.get_summary(), f, indent=2, ensure_ascii=False)
             
+        # Save Telegraph mapping
+        mapping_file = Path(__file__).parent.parent.parent / "review_telegraph_mapping.json"
+        self.telegraph_tracker.save_mapping(mapping_file)
+        
+        # Print Telegraph mapping statistics
+        mapping_stats = self.telegraph_tracker.get_stats()
+        print(f"Telegraph Mapping Statistics:")
+        print(f"  Reviews processed: {mapping_stats['total_reviews']}")
+        print(f"  Articles found: {mapping_stats['total_articles']}")
+        print(f"  Telegraph URLs created: {mapping_stats['total_telegraph_urls']}")
+        print(f"  Reviews with articles: {mapping_stats['reviews_with_articles']}")
+        print(f"  Articles with Telegraph URLs: {mapping_stats['articles_with_telegraph']}")
+            
         if self.stats.failed_review_urls:
             failed_file = Path(__file__).parent.parent.parent / "failed_review_urls.json"
             with open(failed_file, 'w', encoding='utf-8') as f:
@@ -345,20 +427,20 @@ class BulkReviewProcessor:
 @pytest.mark.asyncio
 async def test_extract_review_links():
     """Pytest-compatible test function"""
-    processor = BulkReviewProcessor()
+    processor = TestBulkReviewProcessor()
     return await processor.test_extract_all_review_links()
 
 @pytest.mark.asyncio
 async def test_process_reviews():
     """Pytest-compatible test function"""
-    processor = BulkReviewProcessor()
+    processor = TestBulkReviewProcessor()
     return await processor.test_process_recent_reviews(max_reviews=3)
 
 
 # Main execution for manual testing
 if __name__ == "__main__":
     async def main():
-        processor = BulkReviewProcessor()
+        processor = TestBulkReviewProcessor()
         
         print("=== Phase 1: Extract all review links ===")
         await processor.test_extract_all_review_links()
@@ -375,5 +457,12 @@ if __name__ == "__main__":
         print(f"Total articles processed: {summary['successful_articles']}/{summary['total_articles']}")
         print(f"Telegraph successes: {summary['telegraph_successes']}")
         print(f"Articles over 60KB: {len(summary['over_60kb_articles'])}")
+        
+        # Show Telegraph mapping summary
+        mapping_stats = processor.telegraph_tracker.get_stats()
+        print(f"\n=== Telegraph Mapping Summary ===")
+        print(f"Reviews with Telegraph articles: {mapping_stats['reviews_with_articles']}")
+        print(f"Total Telegraph URLs: {mapping_stats['total_telegraph_urls']}")
+        print(f"Telegraph mapping saved to: review_telegraph_mapping.json")
     
     asyncio.run(main())
