@@ -1,0 +1,25 @@
+{
+  "total_reviews": 1,
+  "successful_reviews": 1,
+  "failed_reviews": 0,
+  "total_articles": 3,
+  "successful_articles": 3,
+  "failed_articles": 0,
+  "telegraph_successes": 3,
+  "telegraph_failures": 0,
+  "over_60kb_articles": [
+    {
+      "title": "The Left and the 2024 election",
+      "url": "https://platypus1917.org/2025/02/01/the-left-and-the-2024-election/",
+      "size_bytes": 71221,
+      "size_kb": 69.6,
+      "review_url": "https://platypus1917.org/category/pr/issue-173/"
+    }
+  ],
+  "processing_details": [
+    {
+      "processing_time": 3.334134578704834
+    }
+  ],
+  "errors": []
+}

@@ -17,16 +17,18 @@ from bs4 import BeautifulSoup
 from src.scraping.review_scraper import ReviewScraper
 from src.reposting_orchestrator import RepostingOrchestrator
 from src.telegraph_manager import TelegraphManager
+from src.scraping.parser import Parser
 
 
-class PlatypusArchiveExtractor:
+class PlatypusArchiveExtractor(Parser):
     """
     Utility class for extracting all review links from Platypus archive.
     This functionality is specific to testing and not part of the main scraper.
+    Inherits from Parser to reuse URL normalization and other utilities.
     """
     
     def __init__(self):
-        self.base_archive_url = "https://platypus1917.org/category/pr/"
+        self.base_archive_url = "https://platypus1917.org/platypus-review/"
         
     def extract_all_review_links(self) -> Dict[str, List[str]]:
         """
@@ -42,7 +44,7 @@ class PlatypusArchiveExtractor:
             soup = BeautifulSoup(response.content, 'html.parser')
             review_links_by_year = {}
             
-            # Find archive sections
+            # Find archive sections - each year is in div.dc-over-wrapper
             archive_sections = self._find_archive_sections(soup)
             
             for section in archive_sections:
@@ -57,44 +59,68 @@ class PlatypusArchiveExtractor:
             return {}
     
     def _find_archive_sections(self, soup: BeautifulSoup) -> List:
-        """Find all archive year sections in the page"""
-        # Look for year headers followed by lists
+        """Find all archive year sections - each in div.dc-over-wrapper"""
+        # Find divs with class "dc-over-wrapper" that are direct children of "dc-four dc-columns"
+        parent_divs = soup.find_all('div', class_='dc-four dc-columns')
         year_sections = []
         
-        # Find all h3 tags that might contain years
-        for h3 in soup.find_all('h3'):
-            text = h3.get_text(strip=True)
-            if text.isdigit() and len(text) == 4:  # Year format
-                # Find the following ul or ol
-                next_list = h3.find_next_sibling(['ul', 'ol'])
-                if next_list:
-                    year_sections.append((h3, next_list))
+        for parent in parent_divs:
+            wrapper_divs = parent.find_all('div', class_='dc-over-wrapper', recursive=False)
+            for wrapper in wrapper_divs:
+                # Look for h2 with year inside this wrapper
+                h2 = wrapper.find('h2')
+                if h2 and h2.get_text(strip=True).isdigit():
+                    year_sections.append(wrapper)
                     
         return year_sections
     
-    def _extract_year_and_links(self, section_tuple) -> tuple:
-        """Extract year and review links from a section"""
-        year_header, links_list = section_tuple
-        year = year_header.get_text(strip=True)
+    def _extract_year_and_links(self, section_div) -> tuple:
+        """Extract year and review links from a section div"""
+        # Get year from h2 tag
+        h2 = section_div.find('h2')
+        if not h2:
+            return None, []
+            
+        year = h2.get_text(strip=True)
         
+        # Find all links in paragraphs within this section
         links = []
-        for link in links_list.find_all('a', href=True):
-            href = link['href']
-            # Look for issue links
-            if '/issue-' in href:
-                full_url = self._normalize_url(href)
-                links.append(full_url)
+        for p in section_div.find_all('p'):
+            for link in p.find_all('a', href=True):
+                href = link['href']
+                # Look for issue links: /category/pr/issue-XXX/
+                if '/category/pr/issue-' in href:
+                    # Use inherited normalize_url method
+                    full_url = self.normalize_url(href, self.base_archive_url)
+                    links.append(full_url)
                 
         return year, links
     
-    def _normalize_url(self, href: str) -> str:
-        """Normalize URL to absolute format"""
-        if href.startswith('http'):
-            return href
-        elif href.startswith('/'):
-            return f"https://platypus1917.org{href}"
-        else:
-            return f"https://platypus1917.org/{href}"
+    # Required abstract method implementations (not used for archive extraction)
+    def parse_listing_page(self, html: str) -> List[str]:
+        """Not used for archive extraction"""
+        return []
+    
+    def parse_content_page(self, html: str, url: str) -> Dict[str, Any]:
+        """Not used for archive extraction"""
+        return {}
+    
+    def extract_title(self, soup: BeautifulSoup) -> str:
+        """Not used for archive extraction"""
+        return ""
+    
+    def extract_content(self, soup: BeautifulSoup) -> str:
+        """Not used for archive extraction"""
+        return ""
+    
+    def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
+        """Not used for archive extraction"""
+        return {}
+    
+    def clean_content_for_publishing(self, content_div) -> str:
+        """Not used for archive extraction"""
+        return ""
+        
 
 
 class BulkProcessingStatistics:
@@ -230,7 +256,17 @@ class BulkReviewProcessor:
         recent_reviews = recent_reviews[:max_reviews]
         
         # Initialize components (mock/test versions)
-        telegraph_manager = TelegraphManager()  # Uses test configuration
+        # Load Telegraph token from graph_bot.json
+        graph_bot_file = Path(__file__).parent.parent.parent.parent / "graph_bot.json"
+        try:
+            with open(graph_bot_file, 'r') as f:
+                graph_bot_data = json.load(f)
+                access_token = graph_bot_data['access_token']
+        except Exception as e:
+            print(f"Warning: Could not load Telegraph token from graph_bot.json: {e}")
+            access_token = "test_token"  # Fallback
+            
+        telegraph_manager = TelegraphManager(access_token=access_token)
         
         self.stats.reset()
         processed_reviews = []
@@ -255,7 +291,12 @@ class BulkReviewProcessor:
                 review_result = await orchestrator.process_review_batch()
                 
                 if review_result:
-                    self.stats.record_review_success(review_result.__dict__)
+                    # Convert Article object to dict for statistics
+                    review_dict = {
+                        'source_url': review_result.source_url,
+                        'articles': [article.__dict__ if hasattr(article, '__dict__') else article for article in review_result.articles]
+                    }
+                    self.stats.record_review_success(review_dict)
                     processed_reviews.append(review_result)
                     print(f"✓ Successfully processed {review_url}")
                 else:
