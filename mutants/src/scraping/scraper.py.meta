@@ -1,9 +1,0 @@
-{
-    "exit_code_by_key": {
-        "scraping.scraper.x\u01c1Scraper\u01c1validate_content_data__mutmut_1": null,
-        "scraping.scraper.x\u01c1Scraper\u01c1validate_content_data__mutmut_2": null,
-        "scraping.scraper.x\u01c1Scraper\u01c1validate_content_data__mutmut_3": null,
-        "scraping.scraper.x\u01c1Scraper\u01c1handle_scraping_error__mutmut_1": null
-    },
-    "hash_by_function_name": {}
-}

@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from src.scraping import ReviewScraper
+from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
 from src.dao.models import Review, Article
 
@@ -86,12 +86,9 @@ class RepostingOrchestrator:
                 print(f"No article schema provided")
                 return None
             
-            # 2. Convert to dict for Telegraph API
-            article_data = article.model_dump()
-            
             # 3. Create Telegraph article
             print(f"Creating Telegraph article for '{article.title}'...")
-            telegraph_urls = await self.telegraph.create_article(article_data)
+            telegraph_urls = await self.telegraph.create_article(article)
             
             if telegraph_urls:
                 # Update the schema with telegraph URLs

@@ -94,3 +94,8 @@ mutants/
 *.db
 
 logs.txt
+
+
+summaries/
+generated_jsons/
+*.json

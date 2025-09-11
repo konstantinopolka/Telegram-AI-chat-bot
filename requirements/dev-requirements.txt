@@ -1,3 +1,8 @@
 -r base-requirements.txt
 
+# Testing
+pytest==8.4.1
+pytest-asyncio==0.25.0
+
+# Development
 aiosqlite==0.21.0
