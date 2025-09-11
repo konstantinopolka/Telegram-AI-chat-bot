@@ -1,0 +1,35 @@
+"""
+Configuration and fixtures for system integration tests.
+"""
+
+import pytest
+import asyncio
+from pathlib import Path
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for the test session."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture
+def project_root():
+    """Get the project root directory"""
+    return Path(__file__).parent.parent.parent.parent
+
+
+@pytest.fixture
+def test_data_dir(project_root):
+    """Get the test data directory"""
+    return project_root / "test_data"
+
+
+@pytest.fixture
+def output_dir(project_root):
+    """Get the output directory for test results"""
+    output_dir = project_root / "test_output"
+    output_dir.mkdir(exist_ok=True)
+    return output_dir
