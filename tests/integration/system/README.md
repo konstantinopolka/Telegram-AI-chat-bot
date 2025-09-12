@@ -1,6 +1,85 @@
-# System Integration Tests
+# Single Review Debug Scripts
 
-This directory contains system-level integration tests that test the entire workflow of the bot across multiple components.
+These scripts help debug the review processing workflow for individual Platypus reviews.
+
+## Scripts Available
+
+### 1. `test_single_review_debug.py` (Manual)
+The comprehensive debugging script that requires manual code editing to select reviews and modes.
+
+**Usage:**
+```bash
+cd /home/sotnikov/projects/Bot
+source venv/bin/activate
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+python tests/integration/system/test_single_review_debug.py
+```
+
+**Features:**
+- Full workflow debugging (uses complete RepostingOrchestrator)
+- Step-by-step debugging with detailed breakdowns
+- Saves results to JSON file for analysis
+- Manual code editing required to change URLs/modes
+
+### 2. `interactive_review_debug.py` (Interactive)
+User-friendly interactive version with prompts for easy debugging.
+
+**Usage:**
+```bash
+cd /home/sotnikov/projects/Bot
+source venv/bin/activate  
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+python tests/integration/system/interactive_review_debug.py
+```
+
+**Features:**
+- Interactive URL selection from recent reviews
+- Interactive mode selection (full workflow vs step-by-step)
+- Uses the same underlying debugging functionality
+- No code editing required
+
+## Debug Modes
+
+### Full Workflow Mode
+- Processes the review exactly like production
+- Uses RepostingOrchestrator with real Telegraph API
+- Shows final processing results and timing
+- Best for testing complete functionality
+
+### Step-by-Step Mode
+- Breaks down processing into discrete steps
+- Shows detailed information at each stage
+- Pauses between steps for inspection
+- Best for identifying specific issues
+
+## Debug Output
+
+Both scripts provide:
+- Article scraping results
+- Schema creation details
+- Telegraph processing status
+- Database operation simulation
+- Channel posting simulation
+- Processing timing and statistics
+- Saved JSON results for further analysis
+
+## Common Debug Scenarios
+
+1. **Content issues**: Use step-by-step mode to inspect scraped content
+2. **Telegraph errors**: Full workflow mode shows Telegraph API responses
+3. **Schema problems**: Step-by-step shows article schema creation details
+4. **Performance testing**: Full workflow provides timing metrics
+
+## Results File
+
+Debug results are saved to: `tests/single_review_debug_results.json`
+
+This file contains:
+- Review metadata
+- Processing statistics
+- Telegraph URLs created
+- Error information
+- Timing data
 
 ## Structure
 

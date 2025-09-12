@@ -451,7 +451,7 @@ if __name__ == "__main__":
         await processor.test_extract_all_review_links()
         
         print("\n=== Phase 2: Process recent reviews ===")
-        await processor.test_process_recent_reviews(max_reviews=1)
+        await processor.test_process_recent_reviews(max_reviews=5)
         
         print("\n=== Phase 3: Analyze large articles ===")
         await processor.test_telegraph_size_limits()

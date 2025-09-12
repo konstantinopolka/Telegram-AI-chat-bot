@@ -101,7 +101,6 @@ class ReviewParser(Parser):
         
         return self.clean_content_for_publishing(content_div)
     
-
     def clean_content_for_publishing(self, content_div) -> str:
         """Clean HTML content for Telegraph compatibility"""
         content_copy = BeautifulSoup(str(content_div), 'html.parser')
@@ -109,6 +108,7 @@ class ReviewParser(Parser):
         # Apply cleaning operations
         self._remove_unwanted_elements(content_copy)
         self._clean_disallowed_tags(content_copy)
+        self._wrap_orphaned_inline_elements(content_copy)
         
         return ''.join(str(child) for child in content_copy.contents)
     
@@ -122,6 +122,28 @@ class ReviewParser(Parser):
         for tag in soup.find_all():
             if tag.name not in ALLOWED_TAGS:
                 tag.unwrap()
+                
+    def _wrap_orphaned_inline_elements(self, soup: BeautifulSoup) -> None:
+        """Wrap orphaned inline elements in paragraph tags"""
+        inline_tags = {'strong', 'b', 'i', 'em', 'u', 's', 'a', 'code'}
+        
+        # Find direct children of the soup that are inline elements
+        for element in list(soup.children):
+            if (hasattr(element, 'name') and 
+                element.name in inline_tags and 
+                element.parent == soup):
+                
+                # Check if there's already a paragraph wrapper
+                prev_sibling = element.previous_sibling
+                if (prev_sibling and hasattr(prev_sibling, 'name') and 
+                    prev_sibling.name == 'p'):
+                    # Move this element into the previous paragraph
+                    prev_sibling.append(element)
+                else:
+                    # Create a new paragraph wrapper
+                    new_p = soup.new_tag('p')
+                    element.insert_before(new_p)
+                    new_p.append(element)
 
     
     def _extract_authors(self, soup: BeautifulSoup) -> List[str]:

@@ -54,6 +54,14 @@ class TelegraphManager:
         Create one or more Telegraph articles if the content exceeds limits.
         Returns list of Telegraph URLs.
         """
+        # TO-DO: authors aren't displayed in the article despite being scraped
+        # TO-DO: only if the article is longer than 60kb: add links to previous page and to the next page if there any
+        # TO-DO: only if the article is longer than 60kb: if you have to divide the article, then in equal chunks and separate blocks shouldn't be broken
+        
+        # TO-DO: on the reposted article, the datum of the reposting is shown by default by Telegraph which can be confusing to the end user
+        
+        # TO-DO: although I set MAX_CHARS to 60000, articles are too big when they have for example 59500 chars of the final text, so it is not understable how Telegraph calculates the length of an article and how it is measured in code 
+        
         title = article.title
         
         chunks = self.split_content(article.content)
@@ -82,16 +90,10 @@ class TelegraphManager:
         content_soup = BeautifulSoup(content, 'html.parser')
         
         # --- Split content safely into chunks ---
-        MAX_CHARS = 60000
+        # TO-DO: 
+        MAX_CHARS = 50000
         blocks = content_soup.find_all(['p', 'ul', 'ol', 'blockquote', 'pre', 'img', 'hr'])
         
-        # 1. add auth
-        
-        # HTML tags allowed in cleaned content for Telegraph compatibility
-        ALLOWED_TAGS = {
-            'a', 'b', 'i', 'em', 'strong', 'u', 's', 'blockquote',
-            'code', 'pre', 'p', 'ul', 'ol', 'li', 'br', 'hr', 'img'
-        }
                 
         chunks = []
         current_chunk = ""
