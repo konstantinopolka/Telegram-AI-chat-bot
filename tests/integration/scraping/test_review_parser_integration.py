@@ -65,7 +65,7 @@ class TestReviewParserIntegration:
         """Integration test: parse_content_page extracts all fields from real HTML"""
         url = "https://platypus1917.org/2025/01/01/marxism-left-today/"
         result = self.parser.parse_content_page(self.CONTENT_HTML, url)
-
+        print(result)
         # Verify all extracted fields
         assert result["title"] == "Marxism and the Left Today"
         assert "main content of the article discussing Marxism" in result["content"]

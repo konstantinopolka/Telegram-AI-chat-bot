@@ -3,11 +3,14 @@ import json
 import os
 from typing import List
 
-#local 
-from src.dao.models import Article
+
 
 #third party libraries
 from telegraph import Telegraph
+
+#local 
+from src.dao.models import Article
+from src.scraping.constants import ALLOWED_TAGS
 
 class TelegraphManager:
     
@@ -52,6 +55,7 @@ class TelegraphManager:
         Returns list of Telegraph URLs.
         """
         title = article.title
+        
         chunks = self.split_content(article.content)
         # --- Create Telegraph pages ---
         telegraph_urls = []
@@ -78,9 +82,17 @@ class TelegraphManager:
         content_soup = BeautifulSoup(content, 'html.parser')
         
         # --- Split content safely into chunks ---
-        MAX_CHARS = 50000
+        MAX_CHARS = 60000
         blocks = content_soup.find_all(['p', 'ul', 'ol', 'blockquote', 'pre', 'img', 'hr'])
         
+        # 1. add auth
+        
+        # HTML tags allowed in cleaned content for Telegraph compatibility
+        ALLOWED_TAGS = {
+            'a', 'b', 'i', 'em', 'strong', 'u', 's', 'blockquote',
+            'code', 'pre', 'p', 'ul', 'ol', 'li', 'br', 'hr', 'img'
+        }
+                
         chunks = []
         current_chunk = ""
 

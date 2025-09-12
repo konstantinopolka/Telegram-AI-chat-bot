@@ -80,12 +80,22 @@ class ReviewParser(Parser):
 
     def extract_title(self, soup: BeautifulSoup) -> str:
         """Extract title from Platypus article"""
-        title_tag = soup.select_one('h1')
+        ARTICLE_TITLE_TAG = 'bpf-title'
+        
+        #Method 1: extract title by class name
+        title_tag = soup.select_one(ARTICLE_TITLE_TAG)
+        
+        #Method 2: extract title by tag
+        if title_tag is None: 
+            title_tag = soup.select_one('h1')
+        
         return self.clean_text(title_tag.get_text()) if title_tag else "Untitled"
     
     def extract_content(self, soup: BeautifulSoup) -> str:
         """Extract main content from Platypus article"""
-        content_div = soup.find('div', class_='dc-page-seo-wrapper')
+        MAIN_CONTENT_TAG_CLASS = 'bpf-content'
+        
+        content_div = soup.find('div', class_= MAIN_CONTENT_TAG_CLASS)
         if not content_div:
             content_div = soup
         
