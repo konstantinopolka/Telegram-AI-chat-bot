@@ -54,7 +54,19 @@ pip install -r requirements/base-requirements.txt
 pip install -r requirements/dev-requirements.txt
 ```
 
-### 3. Environment Variables
+### 3. Project Structure Verification
+
+Ensure your project has the correct structure with `src` as a Python package:
+
+```bash
+# From project root, verify these exist:
+ls src/__init__.py        # Should exist and be a valid Python file
+ls src/scraping/__init__.py
+ls src/dao/__init__.py
+ls pytest.ini            # Should exist in project root
+```
+
+### 4. Environment Variables
 
 Make sure your environment variables are set (see `docker/database.env` for reference):
 - Database configurations
@@ -66,6 +78,9 @@ Make sure your environment variables are set (see `docker/database.env` for refe
 ### Quick Start
 
 ```bash
+# Set PYTHONPATH first (REQUIRED)
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
 # Run all tests
 pytest
 
@@ -87,6 +102,9 @@ pytest -m "system"          # Only system tests
 Test individual components in isolation:
 
 ```bash
+# IMPORTANT: Set PYTHONPATH first
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
 # All unit tests
 pytest tests/unit/ -v
 
@@ -102,6 +120,9 @@ pytest tests/unit/test_scraping/test_parser.py::TestParser::test_parse_html -v
 Test component interactions:
 
 ```bash
+# IMPORTANT: Set PYTHONPATH first
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
 # All integration tests
 pytest tests/integration/ -v
 
@@ -241,10 +262,24 @@ class TestComponentName:
 
 ### Common Issues
 
-1. **Import Errors**
+1. **Import Errors (ModuleNotFoundError: No module named 'src')**
+   
+   This is the most common issue. You must set PYTHONPATH before running tests:
    ```bash
-   # Ensure PYTHONPATH is set correctly
+   # From project root directory
    export PYTHONPATH="$(pwd):$PYTHONPATH"
+   
+   # Then run tests
+   pytest tests/unit/ -v
+   ```
+   
+   Alternative approaches:
+   ```bash
+   # Run with PYTHONPATH inline
+   PYTHONPATH="$(pwd):$PYTHONPATH" pytest tests/unit/ -v
+   
+   # Or install the package in development mode
+   pip install -e .
    ```
 
 2. **Async Test Failures**
@@ -265,6 +300,20 @@ class TestComponentName:
    source docker/database.env
    ```
 
+5. **Wrong Directory**
+   
+   Always run tests from the project root directory (where `pytest.ini` is located):
+   ```bash
+   # Correct - from project root
+   cd /path/to/Bot/
+   export PYTHONPATH="$(pwd):$PYTHONPATH"
+   pytest tests/unit/ -v
+   
+   # Incorrect - from tests directory
+   cd tests/
+   pytest unit/ -v  # This will fail with import errors
+   ```
+
 ### Getting Help
 
 - Check test logs and error messages carefully
@@ -279,6 +328,24 @@ class TestComponentName:
 - [pytest-asyncio documentation](https://pytest-asyncio.readthedocs.io/)
 - See `tests/integration/system/README.md` for system test details
 - Check individual test files for specific component documentation
+
+## 🔍 Quick Fix for Import Errors
+
+If you're getting `ModuleNotFoundError: No module named 'src'` errors:
+
+```bash
+# 1. Make sure you're in the project root directory
+pwd  # Should show /path/to/Bot
+
+# 2. Set PYTHONPATH
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
+# 3. Verify the path includes your project
+echo $PYTHONPATH  # Should include your project path
+
+# 4. Now run tests
+pytest tests/unit/ -v
+```
 
 ---
 
