@@ -6,6 +6,7 @@ including extraction of all review links and batch processing using RepostingOrc
 """
 
 import json
+import os
 import time
 import asyncio
 import pytest
@@ -321,15 +322,19 @@ class TestBulkReviewProcessor:
         recent_reviews = recent_reviews[:max_reviews]
         
         # Initialize components (mock/test versions)
-        # Load Telegraph token from graph_bot.json
-        graph_bot_file = Path(__file__).parent.parent.parent.parent / "graph_bot.json"
-        try:
-            with open(graph_bot_file, 'r') as f:
-                graph_bot_data = json.load(f)
-                access_token = graph_bot_data['access_token']
-        except Exception as e:
-            print(f"Warning: Could not load Telegraph token from graph_bot.json: {e}")
-            access_token = "test_token"  # Fallback
+        # Load Telegraph token from environment variables or fallback to graph_bot.json
+        access_token = os.getenv('TELEGRAPH_ACCESS_TOKEN')
+        
+        if not access_token:
+            # Fallback to JSON file for backward compatibility
+            graph_bot_file = Path(__file__).parent.parent.parent.parent / "graph_bot.json"
+            try:
+                with open(graph_bot_file, 'r') as f:
+                    graph_bot_data = json.load(f)
+                    access_token = graph_bot_data['access_token']
+            except Exception as e:
+                print(f"Warning: Could not load Telegraph token from environment or graph_bot.json: {e}")
+                access_token = "test_token"  # Fallback
             
         telegraph_manager = TelegraphManager(access_token=access_token)
         

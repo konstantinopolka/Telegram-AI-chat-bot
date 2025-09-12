@@ -54,6 +54,13 @@ Bot/
 3. Create a `.env` file in the project root:
    ```env
    TELEGRAM_TOKEN=your_telegram_bot_token_here
+   
+   # Telegraph Configuration (for article publishing)
+   TELEGRAPH_ACCESS_TOKEN=your_telegraph_access_token_here
+   TELEGRAPH_SHORT_NAME=your_short_name
+   TELEGRAPH_AUTHOR_NAME=Your Author Name
+   TELEGRAPH_AUTHOR_URL=https://your-author-url.com/
+   TELEGRAPH_AUTH_URL=https://edit.telegra.ph/auth/your_auth_url_here
    ```
 
 ## Usage
