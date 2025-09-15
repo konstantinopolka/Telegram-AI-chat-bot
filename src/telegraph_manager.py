@@ -54,55 +54,85 @@ class TelegraphManager:
         Create one or more Telegraph articles if the content exceeds limits.
         Returns list of Telegraph URLs.
         """
-        # TO-DO: authors aren't displayed in the article despite being scraped
         # TO-DO: only if the article is longer than 60kb: add links to previous page and to the next page if there any
         # TO-DO: only if the article is longer than 60kb: if you have to divide the article, then in equal chunks and separate blocks shouldn't be broken
         
         # TO-DO: on the reposted article, the datum of the reposting is shown by default by Telegraph which can be confusing to the end user
         
-        # TO-DO: although I set MAX_CHARS to 60000, articles are too big when they have for example 59500 chars of the final text, so it is not understable how Telegraph calculates the length of an article and how it is measured in code 
         
         title = article.title
         
-        chunks = self.split_content(article.content)
+        chunks = self.split_content(article.content, title)
+        
         # --- Create Telegraph pages ---
         telegraph_urls = []
         for i, chunk in enumerate(chunks):
-            print(i)
-            print(chunk)
-            print(len(chunk))
-            page = self.telegraph.create_page(
-                title=title if i == 0 else f"{title} (part {i+1})",
-                html_content=chunk,
-                author_name=self.author_name
-            )
-            telegraph_urls.append(page['url'])
+            chunk_title = title if i == 0 else f"{title} (part {i+1})"
+            
+            try:
+                print(f"   📤 Creating Telegraph page {i+1}/{len(chunks)}: {chunk_title}")
+                print(f"      Content: {len(chunk)} chars, {len(chunk.encode('utf-8'))} bytes")
+                
+                page = self.telegraph.create_page(
+                    title=chunk_title,
+                    html_content=chunk,
+                    author_name=self.author_name
+                )
+                telegraph_urls.append(page['url'])
+                print(f"      ✅ Created: {page['url']}")
+                
+            except Exception as e:
+                print(f"      ❌ Telegraph API error: {str(e)}")
+                # If we get a content too large error, try with smaller chunks
+                if "content too large" in str(e).lower() or "too long" in str(e).lower():
+                    print(f"      🔄 Content still too large, need smaller chunks")
+                    # Could implement recursive splitting here
+                raise e
 
-        print("Created Telegraph articles:")
-        print("\n".join(telegraph_urls))
+        print(f"📄 Created {len(telegraph_urls)} Telegraph article(s)")
         return telegraph_urls
         
-    def split_content(self, content: str):
-        """Split HTML content string safely into chunks."""
+    def split_content(self, content: str, title: str = ""):
+        """Split HTML content string safely into chunks that fit Telegraph's limits."""
         from bs4 import BeautifulSoup
         
         # Parse the content string into BeautifulSoup
         content_soup = BeautifulSoup(content, 'html.parser')
         
-        # --- Split content safely into chunks ---
-        # TO-DO: 
-        MAX_CHARS = 50000
+        # Telegraph has a 64KB limit, but we need to account for:
+        # - Title length
+        # - Author metadata overhead (~100 bytes)
+        # - HTML tag overhead
+        # - UTF-8 encoding (some chars = multiple bytes)
+        # - Telegraph internal formatting overhead
+        
+        # Conservative limit: Reserve space for title and overhead
+        title_bytes = len(title.encode('utf-8'))
+        overhead_bytes = 2000  # Conservative overhead estimate
+        MAX_CONTENT_BYTES = 65536 - title_bytes - overhead_bytes  # ~63KB for content
+        
+        # Convert to character limit (assume average 1.1 bytes per char for safety)
+        MAX_CHARS = int(MAX_CONTENT_BYTES / 1.1) 
+        
+        print(f"   📏 Split limits: Title={title_bytes}B, Max content={MAX_CHARS} chars")
+        
         blocks = content_soup.find_all(['p', 'ul', 'ol', 'blockquote', 'pre', 'img', 'hr'])
         
-                
         chunks = []
         current_chunk = ""
 
         for block in blocks:
             block_html = str(block)
-            # If adding this block exceeds the limit, start a new chunk
-            if len(current_chunk) + len(block_html) > MAX_CHARS:
-                chunks.append(current_chunk)
+            block_bytes = len(block_html.encode('utf-8'))
+            current_bytes = len(current_chunk.encode('utf-8'))
+            
+            # Check both character and byte limits
+            if (current_bytes + block_bytes > MAX_CONTENT_BYTES or 
+                len(current_chunk) + len(block_html) > MAX_CHARS):
+                
+                if current_chunk:  # Don't add empty chunks
+                    chunks.append(current_chunk)
+                    print(f"   📄 Chunk {len(chunks)}: {len(current_chunk)} chars, {len(current_chunk.encode('utf-8'))} bytes")
                 current_chunk = block_html
             else:
                 current_chunk += block_html
@@ -110,5 +140,8 @@ class TelegraphManager:
         # Add the last chunk
         if current_chunk:
             chunks.append(current_chunk)
+            print(f"   📄 Chunk {len(chunks)}: {len(current_chunk)} chars, {len(current_chunk.encode('utf-8'))} bytes")
+            
+        print(f"   ✂️  Split into {len(chunks)} chunk(s)")
         return chunks
 
