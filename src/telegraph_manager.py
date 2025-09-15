@@ -55,14 +55,14 @@ class TelegraphManager:
         Returns list of Telegraph URLs.
         """
         # TO-DO: only if the article is longer than 60kb: add links to previous page and to the next page if there any
-        # TO-DO: only if the article is longer than 60kb: if you have to divide the article, then in equal chunks and separate blocks shouldn't be broken
+        # TO-DO: only if the article is longer than 60kb: if you have to divide the article, then in equal chunks
+    
+        # TO-DO: add data of the creation of the article to <p class="has-text-align-right"><a href="https://platypus1917.org/category/pr/issue-179/"><em>Platypus Review</em> 179</a> | September 2025</p>
         
-        # TO-DO: on the reposted article, the datum of the reposting is shown by default by Telegraph which can be confusing to the end user
-        
-        
+
         title = article.title
-        
-        chunks = self.split_content(article.content, title)
+        content = self._add_reposting_date(article.content)  # Modify content first
+        chunks = self.split_content(content, title)
         
         # --- Create Telegraph pages ---
         telegraph_urls = []
@@ -92,6 +92,49 @@ class TelegraphManager:
         print(f"📄 Created {len(telegraph_urls)} Telegraph article(s)")
         return telegraph_urls
         
+        
+        
+
+    def _add_reposting_date(self, content: str) -> str:
+        """Find existing publication info and add repost date to it."""
+        from bs4 import BeautifulSoup
+        from datetime import datetime
+        
+        # Parse the content
+        soup = BeautifulSoup(content, 'html.parser')
+        
+        # Get current date for reposting
+        current_date = datetime.now()
+        repost_date = current_date.strftime("%Y-%m-%d")
+        
+        # Look for the publication info paragraph
+        # Find p tag with class "has-text-align-right" containing "Platypus Review"
+        pub_paragraph = soup.find('p', class_='has-text-align-right')
+        
+        if pub_paragraph and 'Platypus Review' in pub_paragraph.get_text():
+            # Add repost date to the existing paragraph
+            repost_text = f' <em>(Reposted on: {repost_date})</em>'
+            pub_paragraph.append(BeautifulSoup(repost_text, 'html.parser'))
+        else:
+            # If no existing publication info found, create a new one with repost date
+            month_year = current_date.strftime("%B %Y")
+            issue_number = "179"  # Update this logic as needed
+            
+            pub_info_html = f'''<p class="has-text-align-right"><a href="https://platypus1917.org/category/pr/issue-{issue_number}/"><em>Platypus Review</em> {issue_number}</a> | {month_year} <em>Reposted on: {repost_date}</em></p>'''
+            
+            pub_info_soup = BeautifulSoup(pub_info_html, 'html.parser')
+            
+            # Insert at the beginning
+            first_element = soup.find()
+            if first_element:
+                first_element.insert_before(pub_info_soup.p)
+            else:
+                # If no elements found, just add it as the first content
+                soup.append(pub_info_soup.p)
+        
+        return str(soup)
+
+
     def split_content(self, content: str, title: str = ""):
         """Split HTML content string safely into chunks that fit Telegraph's limits."""
         from bs4 import BeautifulSoup

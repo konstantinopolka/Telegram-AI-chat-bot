@@ -4,6 +4,8 @@ Unit tests for TelegraphManager with environment variable configuration.
 import os
 import pytest
 from unittest.mock import patch, mock_open, MagicMock
+from datetime import datetime
+from bs4 import BeautifulSoup
 from src.telegraph_manager import TelegraphManager
 
 
@@ -94,10 +96,18 @@ class TestTelegraphManager:
         assert manager.access_token == 'override_token'
     
     @patch('src.telegraph_manager.Telegraph')
-    def test_split_content(self, mock_telegraph):
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open())
+    def test_split_content(self, mock_exists, mock_telegraph):
         """Test content splitting functionality."""
         mock_telegraph_instance = MagicMock()
+        mock_telegraph_instance.create_account.return_value = {
+            'access_token': 'test_token',
+            'short_name': 'test',
+            'author_name': 'Test Author'
+        }
         mock_telegraph.return_value = mock_telegraph_instance
+        mock_exists.return_value = False
         
         manager = TelegraphManager(access_token='test_token')
         
@@ -112,3 +122,215 @@ class TestTelegraphManager:
         large_content = large_block + large_block + large_block  # Total > 50000 chars
         chunks = manager.split_content(large_content)
         assert len(chunks) > 1
+
+
+class TestTelegraphManagerRepostingDate:
+    """Test class specifically for _add_reposting_date functionality."""
+    
+    @pytest.fixture
+    def manager(self):
+        """Create a TelegraphManager instance for testing."""
+        with patch('src.telegraph_manager.Telegraph') as mock_telegraph_class, \
+             patch('os.path.exists') as mock_exists, \
+             patch('builtins.open', mock_open()):
+            
+            # Mock Telegraph class and instance
+            mock_telegraph_instance = MagicMock()
+            mock_telegraph_class.return_value = mock_telegraph_instance
+            
+            # Make os.path.exists return False so it doesn't try to read JSON
+            mock_exists.return_value = False
+            
+            # Mock create_account method
+            mock_telegraph_instance.create_account.return_value = {
+                'access_token': 'test_token',
+                'short_name': 'test',
+                'author_name': 'Test Author'
+            }
+            
+            return TelegraphManager(access_token='test_token')
+    
+    @pytest.fixture
+    def mock_datetime(self):
+        """Mock datetime to have consistent test results."""
+        with patch('datetime.datetime') as mock_dt:
+            # Mock datetime.now() to return September 15, 2025
+            mock_now = MagicMock()
+            mock_now.strftime.return_value = "2025-09-15"  # For repost date format
+            mock_dt.now.return_value = mock_now
+            
+            # Also mock for when we need month_year format
+            mock_now.strftime.side_effect = lambda fmt: {
+                "%Y-%m-%d": "2025-09-15",
+                "%B %Y": "September 2025"
+            }.get(fmt, fmt)
+            
+            yield mock_dt
+    
+    def test_add_reposting_date_with_existing_publication_info(self, manager, mock_datetime):
+        """Test adding repost date to existing publication info paragraph."""
+        content = '''
+        <div>
+            <p>Some intro text</p>
+            <p class="has-text-align-right">
+                <a href="https://platypus1917.org/category/pr/issue-179/">
+                    <em>Platypus Review</em> 179
+                </a> | September 2025
+            </p>
+            <p>Article content here</p>
+        </div>
+        '''
+        
+        result = manager._add_reposting_date(content)
+        soup = BeautifulSoup(result, 'html.parser')
+        
+        # Check that the publication paragraph exists and contains repost date
+        pub_paragraph = soup.find('p', class_='has-text-align-right')
+        assert pub_paragraph is not None
+        assert 'Platypus Review' in pub_paragraph.get_text()
+        assert 'Reposted on: 2025-09-15' in pub_paragraph.get_text()
+        assert 'September 2025' in pub_paragraph.get_text()
+    
+    def test_add_reposting_date_without_existing_publication_info(self, manager, mock_datetime):
+        """Test creating new publication info when none exists."""
+        content = '''
+        <div>
+            <p>Some intro text</p>
+            <p>Article content here</p>
+        </div>
+        '''
+        
+        result = manager._add_reposting_date(content)
+        soup = BeautifulSoup(result, 'html.parser')
+        
+        # Check that a new publication paragraph was created
+        pub_paragraph = soup.find('p', class_='has-text-align-right')
+        assert pub_paragraph is not None
+        assert 'Platypus Review' in pub_paragraph.get_text()
+        assert 'Reposted on: 2025-09-15' in pub_paragraph.get_text()
+        assert 'September 2025' in pub_paragraph.get_text()
+        assert 'issue-179' in str(pub_paragraph)
+    
+    def test_add_reposting_date_with_wrong_class_paragraph(self, manager, mock_datetime):
+        """Test when paragraph exists but without the correct class."""
+        content = '''
+        <div>
+            <p>Some intro text</p>
+            <p class="different-class">
+                <a href="https://platypus1917.org/category/pr/issue-179/">
+                    <em>Platypus Review</em> 179
+                </a> | September 2025
+            </p>
+            <p>Article content here</p>
+        </div>
+        '''
+        
+        result = manager._add_reposting_date(content)
+        soup = BeautifulSoup(result, 'html.parser')
+        
+        # Should create a new publication paragraph since the existing one doesn't have the right class
+        pub_paragraphs = soup.find_all('p', class_='has-text-align-right')
+        assert len(pub_paragraphs) == 1  # Should have created a new one
+        
+        new_pub_paragraph = pub_paragraphs[0]
+        assert 'Platypus Review' in new_pub_paragraph.get_text()
+        assert 'Reposted on: 2025-09-15' in new_pub_paragraph.get_text()
+    
+    def test_add_reposting_date_with_paragraph_without_platypus_review(self, manager, mock_datetime):
+        """Test when correct class exists but doesn't contain 'Platypus Review'."""
+        content = '''
+        <div>
+            <p>Some intro text</p>
+            <p class="has-text-align-right">
+                <a href="https://example.com/">Some Other Publication</a> | September 2025
+            </p>
+            <p>Article content here</p>
+        </div>
+        '''
+        
+        result = manager._add_reposting_date(content)
+        soup = BeautifulSoup(result, 'html.parser')
+        
+        # Should create a new publication paragraph since existing one doesn't contain "Platypus Review"
+        pub_paragraphs = soup.find_all('p', class_='has-text-align-right')
+        # Should have both the original and the new one
+        assert len(pub_paragraphs) >= 1
+        
+        # Check that at least one paragraph contains Platypus Review and repost date
+        platypus_paragraph = None
+        for p in pub_paragraphs:
+            if 'Platypus Review' in p.get_text():
+                platypus_paragraph = p
+                break
+        
+        assert platypus_paragraph is not None
+        assert 'Reposted on: 2025-09-15' in platypus_paragraph.get_text()
+    
+    @pytest.mark.parametrize("test_date,expected_format", [
+        (datetime(2025, 9, 15), "2025-09-15"),
+        (datetime(2025, 12, 31), "2025-12-31"),
+        (datetime(2024, 1, 1), "2024-01-01"),
+        (datetime(2025, 7, 4), "2025-07-04"),
+    ])
+    def test_add_reposting_date_different_dates(self, manager, test_date, expected_format):
+        """Test repost date formatting with different dates."""
+        content = '''
+        <div>
+            <p class="has-text-align-right">
+                <a href="https://platypus1917.org/category/pr/issue-179/">
+                    <em>Platypus Review</em> 179
+                </a> | September 2025
+            </p>
+        </div>
+        '''
+        
+        with patch('datetime.datetime') as mock_dt:
+            mock_now = MagicMock()
+            mock_now.strftime.return_value = expected_format
+            mock_dt.now.return_value = mock_now
+            
+            result = manager._add_reposting_date(content)
+            soup = BeautifulSoup(result, 'html.parser')
+            
+            pub_paragraph = soup.find('p', class_='has-text-align-right')
+            assert f'Reposted on: {expected_format}' in pub_paragraph.get_text()
+    
+    def test_add_reposting_date_empty_content(self, manager, mock_datetime):
+        """Test handling of empty content."""
+        content = ''
+        
+        result = manager._add_reposting_date(content)
+        soup = BeautifulSoup(result, 'html.parser')
+        
+        # Should create a new publication paragraph
+        pub_paragraph = soup.find('p', class_='has-text-align-right')
+        assert pub_paragraph is not None
+        assert 'Platypus Review' in pub_paragraph.get_text()
+        assert 'Reposted on: 2025-09-15' in pub_paragraph.get_text()
+    
+    def test_add_reposting_date_preserves_original_content(self, manager, mock_datetime):
+        """Test that original content is preserved when adding repost date."""
+        original_content = '''
+        <div>
+            <h1>Article Title</h1>
+            <p>First paragraph</p>
+            <p class="has-text-align-right">
+                <a href="https://platypus1917.org/category/pr/issue-179/">
+                    <em>Platypus Review</em> 179
+                </a> | September 2025
+            </p>
+            <p>Last paragraph</p>
+        </div>
+        '''
+        
+        result = manager._add_reposting_date(original_content)
+        soup = BeautifulSoup(result, 'html.parser')
+        
+        # Check that all original content is still there
+        assert soup.find('h1', string='Article Title') is not None
+        assert soup.find('p', string='First paragraph') is not None
+        assert soup.find('p', string='Last paragraph') is not None
+        
+        # And repost date was added
+        pub_paragraph = soup.find('p', class_='has-text-align-right')
+        assert 'Reposted on: 2025-09-15' in pub_paragraph.get_text()
