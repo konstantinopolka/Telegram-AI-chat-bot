@@ -61,6 +61,7 @@ class TelegraphManager:
         
 
         title = article.title
+        content = article.content
         content = self._add_reposting_date(article.content)  # Modify content first
         chunks = self.split_content(content, title)
         
@@ -159,7 +160,46 @@ class TelegraphManager:
         
         print(f"   📏 Split limits: Title={title_bytes}B, Max content={MAX_CHARS} chars")
         
-        blocks = content_soup.find_all(['p', 'ul', 'ol', 'blockquote', 'pre', 'img', 'hr'])
+        # Get all top-level elements that could be meaningful chunks
+        # This includes block-level elements and standalone inline elements
+        blocks = []
+        
+        # First, get traditional block-level elements
+        block_elements = content_soup.find_all(['p', 'ul', 'ol', 'blockquote', 'pre', 'hr'])
+        blocks.extend(block_elements)
+        
+        # Then handle standalone img tags (they might not be in paragraphs)
+        standalone_imgs = content_soup.find_all('img')
+        for img in standalone_imgs:
+            # Only add if it's not already inside a block element we found
+            if not any(img in block.find_all('img') if hasattr(block, 'find_all') else False for block in block_elements):
+                blocks.append(img)
+        
+        # Handle any remaining text or inline elements that aren't wrapped in blocks
+        for element in content_soup.children:
+            if hasattr(element, 'name') and element.name in ALLOWED_TAGS:
+                # Check if this element is inline and not already captured
+                if element.name in ['a', 'b', 'i', 'em', 'strong', 'u', 's', 'code', 'br']:
+                    # Only add if it's not already inside a block we found
+                    if not any(element in block.descendants if hasattr(block, 'descendants') else False for block in blocks):
+                        blocks.append(element)
+            elif hasattr(element, 'strip') and element.strip():  # Text nodes
+                # Wrap standalone text in a paragraph for proper handling
+                text_content = element.strip()
+                if text_content and not any(text_content in str(block) for block in blocks):
+                    # Create a temporary paragraph wrapper for text
+                    temp_p = content_soup.new_tag('p')
+                    temp_p.string = text_content
+                    blocks.append(temp_p)
+        
+        # Sort blocks by their position in the original document
+        def get_position(element):
+            try:
+                return list(content_soup.descendants).index(element)
+            except ValueError:
+                return 999999  # Put new elements at the end
+        
+        blocks.sort(key=get_position)
         
         chunks = []
         current_chunk = ""

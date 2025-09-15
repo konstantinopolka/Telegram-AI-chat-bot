@@ -122,6 +122,108 @@ class TestTelegraphManager:
         large_content = large_block + large_block + large_block  # Total > 50000 chars
         chunks = manager.split_content(large_content)
         assert len(chunks) > 1
+    
+    @patch('src.telegraph_manager.Telegraph')
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open())
+    def test_split_content_handles_all_allowed_tags(self, mock_exists, mock_telegraph):
+        """Test that split_content properly handles all tags from ALLOWED_TAGS."""
+        mock_telegraph_instance = MagicMock()
+        mock_telegraph_instance.create_account.return_value = {
+            'access_token': 'test_token',
+            'short_name': 'test',
+            'author_name': 'Test Author'
+        }
+        mock_telegraph.return_value = mock_telegraph_instance
+        mock_exists.return_value = False
+        
+        manager = TelegraphManager(access_token='test_token')
+        
+        # Test content with various allowed tags
+        complex_content = '''
+        <p>This is a <strong>paragraph</strong> with <em>inline</em> elements and <a href="https://example.com">links</a>.</p>
+        <blockquote>This is a blockquote with <code>code</code> inside.</blockquote>
+        <ul>
+            <li>List item with <b>bold</b> text</li>
+            <li>Another item with <i>italic</i> and <u>underlined</u> text</li>
+        </ul>
+        <ol>
+            <li>Numbered list item</li>
+        </ol>
+        <pre>Code block content</pre>
+        <img src="https://example.com/image.jpg" alt="Test image">
+        <hr>
+        <p>Text with <s>strikethrough</s> and line<br>break.</p>
+        '''
+        
+        chunks = manager.split_content(complex_content)
+        
+        # Should have at least one chunk
+        assert len(chunks) >= 1
+        
+        # Combine all chunks to verify no content is lost
+        combined_content = ''.join(chunks)
+        soup = BeautifulSoup(combined_content, 'html.parser')
+        
+        # Verify key elements are preserved
+        assert soup.find('p') is not None
+        assert soup.find('strong') is not None
+        assert soup.find('em') is not None
+        assert soup.find('a') is not None
+        assert soup.find('blockquote') is not None
+        assert soup.find('code') is not None
+        assert soup.find('ul') is not None
+        assert soup.find('li') is not None
+        assert soup.find('b') is not None
+        assert soup.find('i') is not None
+        assert soup.find('u') is not None
+        assert soup.find('ol') is not None
+        assert soup.find('pre') is not None
+        assert soup.find('img') is not None
+        assert soup.find('hr') is not None
+        assert soup.find('s') is not None
+        assert soup.find('br') is not None
+    
+    @patch('src.telegraph_manager.Telegraph')
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open())
+    def test_split_content_handles_standalone_elements(self, mock_exists, mock_telegraph):
+        """Test that standalone inline elements are properly handled."""
+        mock_telegraph_instance = MagicMock()
+        mock_telegraph_instance.create_account.return_value = {
+            'access_token': 'test_token',
+            'short_name': 'test',
+            'author_name': 'Test Author'
+        }
+        mock_telegraph.return_value = mock_telegraph_instance
+        mock_exists.return_value = False
+        
+        manager = TelegraphManager(access_token='test_token')
+        
+        # Test content with standalone elements and mixed structure
+        mixed_content = '''
+        <img src="https://example.com/standalone.jpg" alt="Standalone image">
+        <p>Regular paragraph</p>
+        <strong>Standalone bold text</strong>
+        <hr>
+        <em>Standalone italic text</em>
+        '''
+        
+        chunks = manager.split_content(mixed_content)
+        
+        # Should have at least one chunk
+        assert len(chunks) >= 1
+        
+        # Verify content preservation
+        combined_content = ''.join(chunks)
+        soup = BeautifulSoup(combined_content, 'html.parser')
+        
+        # Check that standalone elements are preserved
+        assert soup.find('img') is not None
+        assert soup.find('p') is not None
+        assert 'Standalone bold text' in combined_content
+        assert 'Standalone italic text' in combined_content
+        assert soup.find('hr') is not None
 
 
 class TestTelegraphManagerRepostingDate:
