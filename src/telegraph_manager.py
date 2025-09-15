@@ -57,7 +57,6 @@ class TelegraphManager:
         # TO-DO: only if the article is longer than 60kb: add links to previous page and to the next page if there any
         # TO-DO: only if the article is longer than 60kb: if you have to divide the article, then in equal chunks
     
-        # TO-DO: add data of the creation of the article to <p class="has-text-align-right"><a href="https://platypus1917.org/category/pr/issue-179/"><em>Platypus Review</em> 179</a> | September 2025</p>
         
 
         title = article.title
@@ -150,15 +149,7 @@ class TelegraphManager:
         # - UTF-8 encoding (some chars = multiple bytes)
         # - Telegraph internal formatting overhead
         
-        # Conservative limit: Reserve space for title and overhead
-        title_bytes = len(title.encode('utf-8'))
-        overhead_bytes = 2000  # Conservative overhead estimate
-        MAX_CONTENT_BYTES = 65536 - title_bytes - overhead_bytes  # ~63KB for content
-        
-        # Convert to character limit (assume average 1.1 bytes per char for safety)
-        MAX_CHARS = int(MAX_CONTENT_BYTES / 1.1) 
-        
-        print(f"   📏 Split limits: Title={title_bytes}B, Max content={MAX_CHARS} chars")
+
         
         # Get all top-level elements that could be meaningful chunks
         # This includes block-level elements and standalone inline elements
@@ -200,6 +191,17 @@ class TelegraphManager:
                 return 999999  # Put new elements at the end
         
         blocks.sort(key=get_position)
+        
+        
+        # Conservative limit: Reserve space for title and overhead
+        title_bytes = len(title.encode('utf-8'))
+        overhead_bytes = 2000  # Conservative overhead estimate
+        MAX_CONTENT_BYTES = 65536 - title_bytes - overhead_bytes  # ~63KB for content
+        
+        # Convert to character limit (assume average 1.1 bytes per char for safety)
+        MAX_CHARS = int(MAX_CONTENT_BYTES / 1.1) 
+        
+        print(f"   📏 Split limits: Title={title_bytes}B, Max content={MAX_CHARS} chars")
         
         chunks = []
         current_chunk = ""

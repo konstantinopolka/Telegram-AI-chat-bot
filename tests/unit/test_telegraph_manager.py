@@ -224,6 +224,84 @@ class TestTelegraphManager:
         assert 'Standalone bold text' in combined_content
         assert 'Standalone italic text' in combined_content
         assert soup.find('hr') is not None
+    
+    @patch('src.telegraph_manager.Telegraph')
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open())
+    def test_get_blocks_method(self, mock_exists, mock_telegraph):
+        """Test the _get_blocks helper method independently."""
+        mock_telegraph_instance = MagicMock()
+        mock_telegraph_instance.create_account.return_value = {
+            'access_token': 'test_token',
+            'short_name': 'test',
+            'author_name': 'Test Author'
+        }
+        mock_telegraph.return_value = mock_telegraph_instance
+        mock_exists.return_value = False
+        
+        manager = TelegraphManager(access_token='test_token')
+        
+        content = '''
+        <p>First paragraph</p>
+        <ul><li>List item</li></ul>
+        <img src="test.jpg" alt="test">
+        <blockquote>Quote</blockquote>
+        '''
+        
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(content, 'html.parser')
+        blocks = manager._get_blocks(soup)
+        
+        # Should have found all block elements
+        assert len(blocks) >= 4
+        
+        # Check that we have the expected block types
+        block_tags = [block.name for block in blocks if hasattr(block, 'name')]
+        assert 'p' in block_tags
+        assert 'ul' in block_tags
+        assert 'img' in block_tags
+        assert 'blockquote' in block_tags
+    
+    @patch('src.telegraph_manager.Telegraph')
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open())
+    def test_get_chunks_method(self, mock_exists, mock_telegraph):
+        """Test the _get_chunks helper method independently."""
+        mock_telegraph_instance = MagicMock()
+        mock_telegraph_instance.create_account.return_value = {
+            'access_token': 'test_token',
+            'short_name': 'test',
+            'author_name': 'Test Author'
+        }
+        mock_telegraph.return_value = mock_telegraph_instance
+        mock_exists.return_value = False
+        
+        manager = TelegraphManager(access_token='test_token')
+        
+        # Create mock blocks (small content)
+        from bs4 import BeautifulSoup
+        small_soup = BeautifulSoup('<p>Small content</p>', 'html.parser')
+        small_blocks = [small_soup.p]
+        
+        chunks = manager._get_chunks(small_blocks, "Test Title")
+        
+        # Should have one chunk for small content
+        assert len(chunks) == 1
+        assert '<p>Small content</p>' in chunks[0]
+        
+        # Test with large content that should split
+        large_content = '<p>' + 'A' * 30000 + '</p>'
+        large_soup = BeautifulSoup(large_content + large_content, 'html.parser')
+        large_blocks = large_soup.find_all('p')
+        
+        chunks = manager._get_chunks(large_blocks, "Test Title")
+        
+        # Should split into multiple chunks for large content
+        assert len(chunks) >= 1
+        
+        # Verify total content is preserved
+        combined = ''.join(chunks)
+        assert 'A' * 30000 in combined
 
 
 class TestTelegraphManagerRepostingDate:
