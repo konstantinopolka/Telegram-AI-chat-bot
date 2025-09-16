@@ -80,7 +80,7 @@ class ReviewParser(Parser):
 
     def extract_title(self, soup: BeautifulSoup) -> str:
         """Extract title from Platypus article"""
-        ARTICLE_TITLE_TAG = 'bpf-title'
+        ARTICLE_TITLE_TAG = '.bpf-title'
         
         #Method 1: extract title by class name
         title_tag = soup.select_one(ARTICLE_TITLE_TAG)
