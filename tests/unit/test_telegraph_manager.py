@@ -228,8 +228,96 @@ class TestTelegraphManager:
     @patch('src.telegraph_manager.Telegraph')
     @patch('os.path.exists')
     @patch('builtins.open', mock_open())
-    def test_get_blocks_method(self, mock_exists, mock_telegraph):
-        """Test the _get_blocks helper method independently."""
+    def test_split_content_with_navigation_reservation(self, mock_exists, mock_telegraph):
+        """Test that split_content reserves space for navigation links when requested."""
+        mock_telegraph_instance = MagicMock()
+        mock_telegraph_instance.create_account.return_value = {
+            'access_token': 'test_token',
+            'short_name': 'test',
+            'author_name': 'Test Author'
+        }
+        mock_telegraph.return_value = mock_telegraph_instance
+        mock_exists.return_value = False
+        
+        manager = TelegraphManager(access_token='test_token')
+        
+        # Test with small content - should not change behavior significantly
+        small_content = '<p>Small content</p>'
+        chunks_without_nav = manager.split_content(small_content, "Test Title", reserve_space_for_nav=False)
+        chunks_with_nav = manager.split_content(small_content, "Test Title", reserve_space_for_nav=True)
+        
+        # Both should have same number of chunks for small content
+        assert len(chunks_without_nav) == len(chunks_with_nav) == 1
+        
+        # Content should be the same
+        assert chunks_without_nav[0] == chunks_with_nav[0]
+    
+    @patch('src.telegraph_manager.Telegraph')
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open())
+    def test_estimate_chunks_count(self, mock_exists, mock_telegraph):
+        """Test the _estimate_chunks_count method."""
+        mock_telegraph_instance = MagicMock()
+        mock_telegraph_instance.create_account.return_value = {
+            'access_token': 'test_token',
+            'short_name': 'test',
+            'author_name': 'Test Author'
+        }
+        mock_telegraph.return_value = mock_telegraph_instance
+        mock_exists.return_value = False
+        
+        manager = TelegraphManager(access_token='test_token')
+        
+        # Test with small content
+        small_content = '<p>Small content</p>'
+        estimate = manager._estimate_chunks_count(small_content, "Test Title")
+        assert estimate == 1
+        
+        # Test with large content
+        large_content = '<p>' + 'A' * 70000 + '</p>'
+        estimate = manager._estimate_chunks_count(large_content, "Test Title")
+        assert estimate > 1
+    
+    @patch('src.telegraph_manager.Telegraph')
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open())
+    def test_create_navigation_links(self, mock_exists, mock_telegraph):
+        """Test the _create_navigation_links method."""
+        mock_telegraph_instance = MagicMock()
+        mock_telegraph_instance.create_account.return_value = {
+            'access_token': 'test_token',
+            'short_name': 'test',
+            'author_name': 'Test Author'
+        }
+        mock_telegraph.return_value = mock_telegraph_instance
+        mock_exists.return_value = False
+        
+        manager = TelegraphManager(access_token='test_token')
+        
+        urls = ['https://telegra.ph/Test-1', 'https://telegra.ph/Test-2', 'https://telegra.ph/Test-3']
+        title = "Test Article"
+        
+        # Test first part (index 0)
+        nav = manager._create_navigation_links(0, 3, urls, title)
+        assert 'Next:' in nav['top']
+        assert 'Previous' not in nav['top']
+        assert nav['bottom'] == f"<hr>{nav['top']}"
+        
+        # Test middle part (index 1)
+        nav = manager._create_navigation_links(1, 3, urls, title)
+        assert 'Previous:' in nav['top']
+        assert 'Next:' in nav['top']
+        
+        # Test last part (index 2)
+        nav = manager._create_navigation_links(2, 3, urls, title)
+        assert 'Previous:' in nav['top']
+        assert 'Next' not in nav['top']
+    
+    @patch('src.telegraph_manager.Telegraph')
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open())
+    def test_add_nav_to_content(self, mock_exists, mock_telegraph):
+        """Test the _add_nav_to_content method."""
         mock_telegraph_instance = MagicMock()
         mock_telegraph_instance.create_account.return_value = {
             'access_token': 'test_token',
@@ -242,66 +330,28 @@ class TestTelegraphManager:
         manager = TelegraphManager(access_token='test_token')
         
         content = '''
-        <p>First paragraph</p>
-        <ul><li>List item</li></ul>
-        <img src="test.jpg" alt="test">
-        <blockquote>Quote</blockquote>
+        <p class="has-text-align-right">Publication info</p>
+        <p>Article content</p>
         '''
         
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(content, 'html.parser')
-        blocks = manager._get_blocks(soup)
-        
-        # Should have found all block elements
-        assert len(blocks) >= 4
-        
-        # Check that we have the expected block types
-        block_tags = [block.name for block in blocks if hasattr(block, 'name')]
-        assert 'p' in block_tags
-        assert 'ul' in block_tags
-        assert 'img' in block_tags
-        assert 'blockquote' in block_tags
-    
-    @patch('src.telegraph_manager.Telegraph')
-    @patch('os.path.exists')
-    @patch('builtins.open', mock_open())
-    def test_get_chunks_method(self, mock_exists, mock_telegraph):
-        """Test the _get_chunks helper method independently."""
-        mock_telegraph_instance = MagicMock()
-        mock_telegraph_instance.create_account.return_value = {
-            'access_token': 'test_token',
-            'short_name': 'test',
-            'author_name': 'Test Author'
+        nav_links = {
+            'top': '<p><strong>Navigation:</strong> <a href="test">Next</a></p><hr>',
+            'bottom': '<hr><p><strong>Navigation:</strong> <a href="test">Next</a></p><hr>'
         }
-        mock_telegraph.return_value = mock_telegraph_instance
-        mock_exists.return_value = False
         
-        manager = TelegraphManager(access_token='test_token')
+        # Test first part (should insert after publication info)
+        result = manager._add_nav_to_content(content, nav_links, is_first_part=True)
         
-        # Create mock blocks (small content)
+        # Navigation should be added at least once
+        assert '<strong>Navigation:</strong>' in result
+        # Check that content is preserved
+        assert 'Article content' in result
+        assert 'Publication info' in result
+        # Should have navigation elements
         from bs4 import BeautifulSoup
-        small_soup = BeautifulSoup('<p>Small content</p>', 'html.parser')
-        small_blocks = [small_soup.p]
-        
-        chunks = manager._get_chunks(small_blocks, "Test Title")
-        
-        # Should have one chunk for small content
-        assert len(chunks) == 1
-        assert '<p>Small content</p>' in chunks[0]
-        
-        # Test with large content that should split
-        large_content = '<p>' + 'A' * 30000 + '</p>'
-        large_soup = BeautifulSoup(large_content + large_content, 'html.parser')
-        large_blocks = large_soup.find_all('p')
-        
-        chunks = manager._get_chunks(large_blocks, "Test Title")
-        
-        # Should split into multiple chunks for large content
-        assert len(chunks) >= 1
-        
-        # Verify total content is preserved
-        combined = ''.join(chunks)
-        assert 'A' * 30000 in combined
+        result_soup = BeautifulSoup(result, 'html.parser')
+        nav_elements = result_soup.find_all(string='Navigation:')
+        assert len(nav_elements) >= 1  # At least top navigation should be there
 
 
 class TestTelegraphManagerRepostingDate:
