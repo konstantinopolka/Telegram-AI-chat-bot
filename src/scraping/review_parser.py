@@ -44,30 +44,62 @@ class ReviewParser(Parser):
             'original_url': url,
             **self.extract_metadata(soup)
         }
-    
-    def extract_title(self, soup: BeautifulSoup) -> str:
-        """Extract title from Platypus article"""
-        title_tag = soup.select_one('h1')
-        return self.clean_text(title_tag.get_text()) if title_tag else "Untitled"
-    
-    def extract_content(self, soup: BeautifulSoup) -> str:
-        """Extract main content from Platypus article"""
-        content_div = soup.find('div', class_='dc-page-seo-wrapper')
-        if not content_div:
-            content_div = soup
         
-        return self.clean_content_for_publishing(content_div)
-    
     def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
-        #TO-DO
-        
         """Extract metadata from Platypus article"""
         metadata = {
             'authors': self._extract_authors(soup),
             'published_date': self._extract_date(soup),
-            'review_id': self._extract_id(soup)
         }
         return metadata
+
+        
+    def extract_review_id(self, html: str) -> int:
+        """Extract review ID from HTML span or URL"""
+        
+        # Method 1: Try HTML span first
+        soup = self.create_soup(html)
+        span = soup.select_one('span.selected')
+        if span:
+            text = span.get_text(strip=True)
+            import re
+            match = re.search(r'Issue #(\d+)', text)
+            if match:
+                return int(match.group(1))
+        
+        # Method 2: Fallback to base_url if it contains the pattern
+        if hasattr(self, 'base_url') and self.base_url:
+            import re
+            match = re.search(r'/issue-(\d+)/?', self.base_url)
+            if match:
+                return int(match.group(1))
+        
+        # Final fallback
+        return hash(self.base_url) % 1000000
+    
+
+    def extract_title(self, soup: BeautifulSoup) -> str:
+        """Extract title from Platypus article"""
+        ARTICLE_TITLE_TAG = '.bpf-title'
+        
+        #Method 1: extract title by class name
+        title_tag = soup.select_one(ARTICLE_TITLE_TAG)
+        
+        #Method 2: extract title by tag
+        if title_tag is None: 
+            title_tag = soup.select_one('h1')
+        
+        return self.clean_text(title_tag.get_text()) if title_tag else "Untitled"
+    
+    def extract_content(self, soup: BeautifulSoup) -> str:
+        """Extract main content from Platypus article"""
+        MAIN_CONTENT_TAG_CLASS = 'bpf-content'
+        
+        content_div = soup.find('div', class_= MAIN_CONTENT_TAG_CLASS)
+        if not content_div:
+            content_div = soup
+        
+        return self.clean_content_for_publishing(content_div)
     
     def clean_content_for_publishing(self, content_div) -> str:
         """Clean HTML content for Telegraph compatibility"""
@@ -76,6 +108,7 @@ class ReviewParser(Parser):
         # Apply cleaning operations
         self._remove_unwanted_elements(content_copy)
         self._clean_disallowed_tags(content_copy)
+        self._wrap_orphaned_inline_elements(content_copy)
         
         return ''.join(str(child) for child in content_copy.contents)
     
@@ -89,6 +122,28 @@ class ReviewParser(Parser):
         for tag in soup.find_all():
             if tag.name not in ALLOWED_TAGS:
                 tag.unwrap()
+                
+    def _wrap_orphaned_inline_elements(self, soup: BeautifulSoup) -> None:
+        """Wrap orphaned inline elements in paragraph tags"""
+        inline_tags = {'strong', 'b', 'i', 'em', 'u', 's', 'a', 'code'}
+        
+        # Find direct children of the soup that are inline elements
+        for element in list(soup.children):
+            if (hasattr(element, 'name') and 
+                element.name in inline_tags and 
+                element.parent == soup):
+                
+                # Check if there's already a paragraph wrapper
+                prev_sibling = element.previous_sibling
+                if (prev_sibling and hasattr(prev_sibling, 'name') and 
+                    prev_sibling.name == 'p'):
+                    # Move this element into the previous paragraph
+                    prev_sibling.append(element)
+                else:
+                    # Create a new paragraph wrapper
+                    new_p = soup.new_tag('p')
+                    element.insert_before(new_p)
+                    new_p.append(element)
 
     
     def _extract_authors(self, soup: BeautifulSoup) -> List[str]:
@@ -128,19 +183,5 @@ class ReviewParser(Parser):
             return date_elem.get('datetime') or self.clean_text(date_elem.get_text())
         return ""
     
-    def _extract_id(self, soup: BeautifulSoup) -> int:
-        """Extract review id from Platypus Review number"""
-        container = soup.select_one('.bpf-content .has-text-align-right')
-        if container:
-            text = container.get_text(strip=True)
-            print(f"text is {text}")
-            # Look for pattern like "Platypus Review 173" or "Platypus Review173"
-            import re
-            match = re.search(r'Platypus Review\s*(\d+)', text)
-            if match:
-                return int(match.group(1))
-        
-        # Fallback: generate ID from URL hash
-        return hash(self.base_url) % 1000000
 
 

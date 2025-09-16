@@ -90,3 +90,12 @@ docker-data/
 
 mutants/
 *.cfg
+
+*.db
+
+logs.txt
+
+
+summaries/
+generated_jsons/
+*.json

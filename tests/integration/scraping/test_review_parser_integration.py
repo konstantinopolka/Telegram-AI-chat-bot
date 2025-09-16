@@ -23,7 +23,7 @@ class TestReviewParserIntegration:
     <html>
       <body>
         <h1>Marxism and the Left Today</h1>
-        <div class="dc-page-seo-wrapper">
+        <div class="bpf-content">
           <p>This is the main content of the article discussing Marxism.</p>
           <blockquote>
             "The critique of political economy is the foundation of Marxist theory."
@@ -37,8 +37,6 @@ class TestReviewParserIntegration:
           </div>
           <script>console.log('This should be removed');</script>
           <nav>Navigation should be removed</nav>
-        </div>
-        <div class="bpf-content">
           <h2>by John Doe and Jane Smith</h2>
           <p class="has-text-align-right">Platypus Review 173 | February 2025</p>
         </div>
@@ -65,26 +63,32 @@ class TestReviewParserIntegration:
         """Integration test: parse_content_page extracts all fields from real HTML"""
         url = "https://platypus1917.org/2025/01/01/marxism-left-today/"
         result = self.parser.parse_content_page(self.CONTENT_HTML, url)
-        
+        print(result)
         # Verify all extracted fields
         assert result["title"] == "Marxism and the Left Today"
         assert "main content of the article discussing Marxism" in result["content"]
         assert result["original_url"] == url
         assert result["authors"] == ["John Doe", "Jane Smith"]
         assert result["published_date"] == "February 2025"
-        assert result["review_id"] == 173
+        # Note: review_id is extracted separately via extract_review_id method
 
     def test_extract_metadata_integration(self):
         """Integration test: extract_metadata returns correct dict from real HTML"""
         soup = BeautifulSoup(self.CONTENT_HTML, "html.parser")
         metadata = self.parser.extract_metadata(soup)
-        
+
         expected_metadata = {
             "authors": ["John Doe", "Jane Smith"],
-            "published_date": "February 2025",
-            "review_id": 173
+            "published_date": "February 2025"
         }
         assert metadata == expected_metadata
+
+    def test_extract_review_id_integration(self):
+        """Integration test: extract_review_id works with real HTML"""
+        # Test with span.selected format
+        html = '<html><body><span class="selected">Archive for category Issue #173</span></body></html>'
+        review_id = self.parser.extract_review_id(html)
+        assert review_id == 173
 
     def test_extract_title_integration(self):
         """Integration test: extract_title returns correct title from real HTML"""
@@ -96,6 +100,7 @@ class TestReviewParserIntegration:
         """Integration test: extract_content returns cleaned HTML from real HTML"""
         soup = BeautifulSoup(self.CONTENT_HTML, "html.parser")
         content = self.parser.extract_content(soup)
+        print(content)
         
         # Should contain main content
         assert "main content of the article discussing Marxism" in content
@@ -121,26 +126,22 @@ class TestReviewParserEdgeCasesIntegration:
         self.parser = ReviewParser(base_url="https://platypus1917.org/platypus-review/")
 
     def test_content_without_wrapper_integration(self):
-        """Integration test: content extraction when dc-page-seo-wrapper is missing"""
+        """Integration test: content extraction when bpf-content is missing"""
         html_without_wrapper = """
         <html>
           <body>
             <h1>Article Without Wrapper</h1>
-            <p>This content is not wrapped in dc-page-seo-wrapper.</p>
-            <div class="bpf-content">
-              <h2>Single Author</h2>
-              <p class="has-text-align-right">Platypus Review 175 | April 2025</p>
-            </div>
+            <p>This content is not wrapped in bpf-content.</p>
           </body>
         </html>
         """
-        
+
         result = self.parser.parse_content_page(html_without_wrapper, "test-url")
-        
+
         assert result["title"] == "Article Without Wrapper"
-        assert "not wrapped in dc-page-seo-wrapper" in result["content"]
-        assert result["authors"] == ["Single Author"]
-        assert result["review_id"] == 175
+        assert "not wrapped in bpf-content" in result["content"]
+        assert result["authors"] == []  # No authors since no bpf-content wrapper
+        # Note: review_id is extracted separately via extract_review_id method
 
     def test_authors_with_different_formats_integration(self):
         """Integration test: author extraction with various formatting"""
@@ -194,23 +195,31 @@ class TestReviewParserEdgeCasesIntegration:
             assert date == expected_date
 
     def test_review_id_extraction_variants_integration(self):
-        """Integration test: review ID extraction with different spacing"""
+        """Integration test: review ID extraction with span.selected format"""
         id_variants = [
-            # Normal spacing
-            ("Platypus Review 173 | February 2025", 173),
-            # No space
-            ("Platypus Review173 | February 2025", 173),
-            # Multiple spaces
-            ("Platypus Review   178 | July 2025", 178),
-            # Tab character
-            ("Platypus Review\t180 | March 2025", 180),
+            # Normal format
+            ("Archive for category Issue #173", 173),
+            # Different issue numbers  
+            ("Archive for category Issue #178", 178),
+            ("Archive for category Issue #180", 180),
+            ("Archive for category Issue #001", 1),
         ]
-        
+
         for text, expected_id in id_variants:
-            html = f'<div class="bpf-content"><p class="has-text-align-right">{text}</p></div>'
-            soup = BeautifulSoup(html, "html.parser")
-            review_id = self.parser._extract_id(soup)
+            # Test the extract_review_id method with span.selected
+            html = f'<html><body><span class="selected">{text}</span></body></html>'
+            review_id = self.parser.extract_review_id(html)
             assert review_id == expected_id
+
+    def test_review_id_extraction_url_fallback_integration(self):
+        """Integration test: review ID extraction from URL when span fails"""
+        # Set parser base_url to test URL fallback
+        parser = ReviewParser("https://platypus1917.org/category/pr/issue-175/")
+        
+        # HTML without span.selected should fallback to URL
+        html = '<html><body><p>No issue span here</p></body></html>'
+        review_id = parser.extract_review_id(html)
+        assert review_id == 175
 
 
 class TestReviewParserComplexContentIntegration:
@@ -234,7 +243,7 @@ class TestReviewParserComplexContentIntegration:
             <main>
               <h1>The Crisis of Marxism in the 21st Century</h1>
               
-              <div class="dc-page-seo-wrapper">
+              <div class="bpf-content">
                 <p>Introduction paragraph with <em>emphasis</em> and <strong>strong text</strong>.</p>
                 
                 <blockquote cite="https://example.com">
@@ -242,7 +251,7 @@ class TestReviewParserComplexContentIntegration:
                   the point is to change it." — Karl Marx
                 </blockquote>
                 
-                <h2>Historical Context</h2>
+                <h3>Historical Context</h3>
                 <p>The development of Marxist thought has undergone several phases:</p>
                 
                 <ol>
@@ -251,7 +260,7 @@ class TestReviewParserComplexContentIntegration:
                   <li>Revolutionary period (1917-1920s)</li>
                 </ol>
                 
-                <h3>Key Theoretical Developments</h3>
+                <h4>Key Theoretical Developments</h4>
                 <ul>
                   <li><a href="/article/dialectical-materialism">Dialectical materialism</a></li>
                   <li><a href="/article/historical-materialism">Historical materialism</a></li>
@@ -282,9 +291,7 @@ class TestReviewParserComplexContentIntegration:
                 </div>
                 
                 <footer>Article footer that should be removed</footer>
-              </div>
-              
-              <div class="bpf-content">
+                
                 <h2>Desmund Hui and Griffith Jones</h2>
                 <p class="has-text-align-right">Platypus Review 174 | March–April 2025</p>
               </div>
@@ -337,7 +344,7 @@ class TestReviewParserComplexContentIntegration:
         # Verify metadata extraction
         assert result["authors"] == ["Desmund Hui", "Griffith Jones"]
         assert result["published_date"] == "March–April 2025"
-        assert result["review_id"] == 174
+        # Note: review_id is extracted separately via extract_review_id method
         assert result["original_url"] == url
 
     def test_minimal_article_structure_integration(self):
@@ -346,8 +353,8 @@ class TestReviewParserComplexContentIntegration:
         <html>
           <body>
             <h1>Brief Article</h1>
-            <p>Short content.</p>
             <div class="bpf-content">
+              <p>Short content.</p>
               <h2>Anonymous</h2>
               <p class="has-text-align-right">Platypus Review 176 | May 2025</p>
             </div>
@@ -362,5 +369,5 @@ class TestReviewParserComplexContentIntegration:
         assert "Short content." in result["content"]
         assert result["authors"] == ["Anonymous"]
         assert result["published_date"] == "May 2025"
-        assert result["review_id"] == 176
+        # Note: review_id is extracted separately via extract_review_id method
         assert result["original_url"] == url

@@ -193,25 +193,21 @@ class TestReviewParser:
         soup = Mock()
         
         with patch.object(review_parser, '_extract_authors') as mock_authors, \
-             patch.object(review_parser, '_extract_date') as mock_date, \
-             patch.object(review_parser, '_extract_id') as mock_id:
+             patch.object(review_parser, '_extract_date') as mock_date:
             
             mock_authors.return_value = ['Author 1', 'Author 2']
             mock_date.return_value = 'February 2025'
-            mock_id.return_value = 173
             
             result = review_parser.extract_metadata(soup)
             
             expected = {
                 'authors': ['Author 1', 'Author 2'],
-                'published_date': 'February 2025',
-                'review_id': 173
+                'published_date': 'February 2025'
             }
             
             assert result == expected
             mock_authors.assert_called_once_with(soup)
             mock_date.assert_called_once_with(soup)
-            mock_id.assert_called_once_with(soup)
 
     @pytest.mark.parametrize(
         "title_html, expected_title",
@@ -569,96 +565,123 @@ class TestReviewParserExtractDate:
         assert result == ""
 
 
-class TestReviewParserExtractId:
-    """Test the _extract_id method"""
+class TestReviewParserExtractReviewId:
+    """Test the extract_review_id method"""
     
-    def test_extract_id_with_space(self, simple_parser):
-        """Test ID extraction with space between Review and number"""
+    def test_extract_review_id_from_span_success(self, simple_parser):
+        """Test review ID extraction from span with Issue #xxx format"""
         html = """
-        <div class="bpf-content">
-            <p class="has-text-align-right">Platypus Review 173 | February 2025</p>
-        </div>
+        <html>
+            <body>
+                <span class="selected">Archive for category Issue #173</span>
+            </body>
+        </html>
         """
-        soup = BeautifulSoup(html, 'html.parser')
         
-        result = simple_parser._extract_id(soup)
+        result = simple_parser.extract_review_id(html)
         assert result == 173
     
-    def test_extract_id_without_space(self, simple_parser):
-        """Test ID extraction without space between Review and number"""
-        html = """
-        <div class="bpf-content">
-            <p class="has-text-align-right">Platypus Review173 | February 2025</p>
-        </div>
-        """
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        result = simple_parser._extract_id(soup)
-        assert result == 173
-    
-    def test_extract_id_multiple_spaces(self, simple_parser):
-        """Test ID extraction with multiple spaces"""
-        html = """
-        <div class="bpf-content">
-            <p class="has-text-align-right">Platypus Review   178 | July 2025</p>
-        </div>
-        """
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        result = simple_parser._extract_id(soup)
-        assert result == 178
-    
-    def test_extract_id_no_container(self, simple_parser):
-        """Test ID extraction when container doesn't exist"""
-        html = "<html><body><p>No review info here</p></body></html>"
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        result = simple_parser._extract_id(soup)
-        # Should fallback to hash-based ID
-        expected = hash(simple_parser.base_url) % 1000000
-        assert result == expected
-    
-    def test_extract_id_no_match(self, simple_parser):
-        """Test ID extraction when pattern doesn't match"""
-        html = """
-        <div class="bpf-content">
-            <p class="has-text-align-right">Some other text | February 2025</p>
-        </div>
-        """
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        result = simple_parser._extract_id(soup)
-        # Should fallback to hash-based ID
-        expected = hash(simple_parser.base_url) % 1000000
-        assert result == expected
-    
-    def test_extract_id_regex_pattern(self):
-        """Test that the regex pattern works correctly"""
-        pattern = r'Platypus Review\s*(\d+)'
-        
-        # Test cases
+    def test_extract_review_id_from_span_different_numbers(self, simple_parser):
+        """Test review ID extraction with different issue numbers"""
         test_cases = [
-            ("Platypus Review 173", "173"),
-            ("Platypus Review173", "173"),
-            ("Platypus Review  178", "178"),
-            ("Platypus Review\t173", "173"),
+            ("Archive for category Issue #178", 178),
+            ("Archive for category Issue #001", 1),
+            ("Archive for category Issue #999", 999),
         ]
         
-        for text, expected_id in test_cases:
-            match = re.search(pattern, text)
+        for span_text, expected_id in test_cases:
+            html = f'<span class="selected">{span_text}</span>'
+            result = simple_parser.extract_review_id(html)
+            assert result == expected_id
+    
+    def test_extract_review_id_from_url_fallback(self, simple_parser):
+        """Test review ID extraction from URL when span fails"""
+        # Update the parser's base_url to contain the issue pattern
+        simple_parser.base_url = "https://platypus1917.org/category/pr/issue-173/"
+        
+        html = "<html><body><span>No issue number here</span></body></html>"
+        
+        result = simple_parser.extract_review_id(html)
+        assert result == 173
+    
+    def test_extract_review_id_url_different_patterns(self, simple_parser):
+        """Test URL extraction with different URL patterns"""
+        test_cases = [
+            ("https://platypus1917.org/category/pr/issue-178/", 178),
+            ("https://example.com/issue-001/", 1),
+            ("https://site.com/category/issue-999", 999),  # No trailing slash
+        ]
+        
+        for url, expected_id in test_cases:
+            simple_parser.base_url = url
+            html = "<html><body></body></html>"  # No span
+            
+            result = simple_parser.extract_review_id(html)
+            assert result == expected_id
+    
+    def test_extract_review_id_span_no_match(self, simple_parser):
+        """Test when span exists but doesn't match pattern"""
+        simple_parser.base_url = "https://platypus1917.org/category/pr/issue-173/"
+        
+        html = """
+        <html>
+            <body>
+                <span class="selected">Some other text without issue number</span>
+            </body>
+        </html>
+        """
+        
+        result = simple_parser.extract_review_id(html)
+        # Should fallback to URL extraction
+        assert result == 173
+    
+    def test_extract_review_id_no_span_no_url_match(self, simple_parser):
+        """Test when neither span nor URL contains pattern"""
+        simple_parser.base_url = "https://example.com/some-other-path/"
+        
+        html = "<html><body></body></html>"
+        
+        result = simple_parser.extract_review_id(html)
+        # Should fallback to hash
+        expected = hash(simple_parser.base_url) % 1000000
+        assert result == expected
+    
+    def test_extract_review_id_empty_html(self, simple_parser):
+        """Test with empty HTML"""
+        simple_parser.base_url = "https://platypus1917.org/category/pr/issue-173/"
+        
+        result = simple_parser.extract_review_id("")
+        assert result == 173
+    
+    def test_extract_review_id_regex_patterns(self):
+        """Test the regex patterns used in the method"""
+        import re
+        
+        # Test span pattern
+        span_pattern = r'Issue #(\d+)'
+        test_cases = [
+            ("Archive for category Issue #173", "173"),
+            ("Issue #178", "178"),
+            ("Something Issue #001 something", "001"),
+        ]
+        
+        for text, expected in test_cases:
+            match = re.search(span_pattern, text)
             assert match is not None
-            assert match.group(1) == expected_id
+            assert match.group(1) == expected
         
-        # Negative test cases
-        negative_cases = [
-            "platypus review 173",  # Case sensitive
-            "Review 173",           # Missing "Platypus"
-            "Platypus Review ABC",  # No digits
+        # Test URL pattern
+        url_pattern = r'/issue-(\d+)/?'
+        test_cases = [
+            ("/category/pr/issue-173/", "173"),
+            ("/issue-178/", "178"),
+            ("/issue-001", "001"),  # No trailing slash
         ]
         
-        for text in negative_cases:
-            match = re.search(pattern, text)
-            assert match is None
+        for url, expected in test_cases:
+            match = re.search(url_pattern, url)
+            assert match is not None
+            assert match.group(1) == expected
 
 
 class TestReviewParserAbstractMethodImplementation:
@@ -695,12 +718,10 @@ class TestReviewParserAbstractMethodImplementation:
         
         # extract_metadata should return dict
         with patch.object(simple_parser, '_extract_authors') as mock_authors, \
-             patch.object(simple_parser, '_extract_date') as mock_date, \
-             patch.object(simple_parser, '_extract_id') as mock_id:
+             patch.object(simple_parser, '_extract_date') as mock_date:
             
             mock_authors.return_value = []
             mock_date.return_value = ""
-            mock_id.return_value = 123
             
             result = simple_parser.extract_metadata(soup)
             assert isinstance(result, dict)
@@ -708,3 +729,7 @@ class TestReviewParserAbstractMethodImplementation:
         # clean_content_for_publishing should return string
         result = simple_parser.clean_content_for_publishing(soup)
         assert isinstance(result, str)
+        
+        # extract_review_id should return int
+        result = simple_parser.extract_review_id(html)
+        assert isinstance(result, int)

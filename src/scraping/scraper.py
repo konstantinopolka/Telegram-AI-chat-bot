@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 from .constants import REQUIRED_FIELDS
+
+
 class Scraper(ABC):
     """
     Abstract base class for scrapers that combine fetching and parsing operations.
@@ -16,7 +18,7 @@ class Scraper(ABC):
         pass
     
     @abstractmethod
-    def scrape_single_article(self, article_url: str) -> Optional[Dict[str, Any]]:
+    def scrape_single_article(self, article_url: str) -> Optional[Dict[str, any]]:
         """
         Scrape a single article by URL.
         Complete workflow: fetch → parse → validate → return article data.
@@ -25,7 +27,7 @@ class Scraper(ABC):
         pass
     
     @abstractmethod
-    def scrape_review_batch(self) -> List[Dict[str, Any]]:
+    def scrape_review_batch(self) -> Dict[str, any]:
         """
         Scrape a batch of reviews/articles from the main page.
         This is the main method that orchestrates the full scraping process.

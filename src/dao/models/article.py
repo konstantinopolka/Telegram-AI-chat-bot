@@ -1,22 +1,27 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, BigInteger, Text, JSON
+#default libraries
+from typing import Optional, List
+
+#third party libraries
 from datetime import datetime, timezone
-from typing import List
-from src.dao.database_instance import Base
+from sqlmodel import SQLModel, Field, Relationship, JSON
 
 
-class Article(Base):
+#local 
+# from src.dao.models.review import Review
+
+class Article(SQLModel, table=True):
     __tablename__ = "articles"
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    title = Column(String(255), nullable=False)
-    content = Column(Text, nullable=False)
-    original_url = Column(String(500), nullable=False)
-    review_id = Column(Integer, nullable=False)
-    telegraph_urls = Column(JSON, default=list)  # URLs after publishing
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=timezone.utc))
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(tz=timezone.utc), onupdate=lambda: datetime.now(tz=timezone.utc))
-    authors = Column(JSON, default=list)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str = Field(max_length=255)
+    content: str 
+    original_url: str = Field(max_length=500)
+
+        # Foreign key to reviews.id
+    review_id: int = Field(foreign_key="reviews.id")
+    telegraph_urls: Optional[List[str]] = Field(default_factory=list, sa_type=JSON)
+    created_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    authors: Optional[List[str]] = Field(default_factory=list, sa_type=JSON)
     
-    def __repr__(self):
-        return f"<Article(id={self.id}, title='{self.title}', review_id={self.review_id})>"
-    
+    # Relationship: many articles -> one review
+    review: Optional["Review"] = Relationship(back_populates="articles")
