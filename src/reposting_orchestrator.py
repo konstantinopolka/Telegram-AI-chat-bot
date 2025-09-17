@@ -1,4 +1,10 @@
+#standard libraries
 from typing import List, Dict, Any
+
+#third party libraries
+from sqlalchemy.ext.asyncio import AsyncSession
+
+#local
 from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
 from src.dao.models import Review, Article
@@ -9,9 +15,9 @@ logger = get_logger(__name__)
 
 class RepostingOrchestrator:
     def __init__(self, review_scraper: ReviewScraper, telegraph_manager: TelegraphManager, db_session, bot_handler, channel_poster):
-        self.scraper = review_scraper
-        self.telegraph = telegraph_manager
-        self.db = db_session
+        self.scraper: ReviewScraper  = review_scraper
+        self.telegraph: TelegraphManager = telegraph_manager
+        self.db: AsyncSession = db_session
         self.bot = bot_handler
         self.channel = channel_poster
 
@@ -101,9 +107,8 @@ class RepostingOrchestrator:
                 # 4. Save to database
                 logger.debug("Saving to database")
                 # TODO: Save Article object to database
-                # article_obj = Article(**article_schema.dict())
-                # self.db.add(article_obj)
-                # self.db.commit()
+                self.db.add(article)
+                self.db.commit()
                 
                 # 5. Post to channel
                 logger.debug("Posting to channel")
