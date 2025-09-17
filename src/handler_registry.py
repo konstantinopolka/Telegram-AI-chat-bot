@@ -119,6 +119,20 @@ class HandlerRegistry:
                 except Exception as reply_error:
                     logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
     
+    async def __save_user(self, message, session: AsyncSession):
+        user = User(
+                telegram_id=message.from_user.id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name,
+                phone=message.from_user.phone 
+        )
+        session.add(user)
+        await session.commit()
+        await self.bot.reply_to(message, "Welcome, you have been registered!")
+        self.logger.info("New user registered and welcomed.")
+        
+    
     def _register_rules_handler(self):
         """Register rules command handler"""
         logger.debug("Creating rules command handler for /rules")

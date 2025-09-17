@@ -32,6 +32,8 @@ class BotHandler:
         # Create the bot instance
         self.bot = AsyncTeleBot(TOKEN)
         logger.debug("AsyncTeleBot instance created")
+        self.handler_registry: HandlerRegistry = None
+       
         
         # Setup logging for the bot
         logger.info("Setting up bot message logging wrapper")
