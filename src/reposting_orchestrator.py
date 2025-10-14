@@ -21,7 +21,7 @@ class RepostingOrchestrator:
         try:
             # 1. Scrape all articles from review site
             print("Step 1: Scraping articles from review site...")
-            raw_review_data = self.scraper.scrape_review_batch()
+            raw_review_data: Dict[str, Any] = self.scraper.scrape_review_batch()
             
             if not raw_review_data:
                 print("No articles found to process")
@@ -31,11 +31,11 @@ class RepostingOrchestrator:
      
             # 3. Process all articles
             print("Step 4: Processing all articles...")
-            processed_articles = await self.process_articles(raw_review_data)
+            processed_articles: List[Article] = await self.process_articles(raw_review_data)
             
             
-            # 3. Create review schema
-            review_schema = Review(
+            # 3. Create review
+            review = Review(
                 id=raw_review_data.get('review_id'),
                 source_url=raw_review_data['source_url'],
                 articles=processed_articles,
@@ -46,7 +46,7 @@ class RepostingOrchestrator:
             
             
             print(f"Batch processing complete. Processed {len(processed_articles)} articles.")
-            return review_schema
+            return review
             
         except Exception as e:
             print(f"Error in batch processing: {e}")

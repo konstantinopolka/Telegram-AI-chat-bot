@@ -1,223 +1,427 @@
-# Telegram Echo Bot (AsyncTeleBot)
+# Telegram AI Chat Bot
 
-This is a simple Telegram bot built with **pyTelegramBotAPI (telebot)** using async polling that echoes back any message sent by the user with detailed logging.
+A sophisticated Telegram bot built with **pyTelegramBotAPI (telebot)** that scrapes articles from review websites, publishes them to Telegraph, and manages content through a database-driven architecture.
 
 ## Features
 
-* Receives messages from Telegram using **polling** (no webhook required)
-* Responds to `/start` and `/help` commands with a welcome message
-* Responds to `/rules` command with bot rules
-* Echoes back any other text message with "You said: [message]"
-* **Comprehensive logging** - logs all incoming updates and outgoing responses in JSON format
-* **Exception handling** - graceful error handling with fallback messages
-* **Modular structure** - handlers separated into different files
+- **Article Scraping**: Automatically scrapes articles from review websites with configurable parsing
+- **Telegraph Integration**: Publishes articles to Telegraph with automatic content splitting for large articles
+- **Database Management**: SQLModel-based database with Alembic migrations for schema versioning
+- **User Management**: Tracks users and their interactions with the bot
+- **Channel Posting**: Posts articles to Telegram channels
+- **Comprehensive Logging**: Logs all bot activity (incoming/outgoing) in JSON format
+- **Modular Architecture**: Clean separation of concerns with abstract base classes for extensibility
+- **Docker Support**: Production-ready Docker deployment with versioning
+- **Extensive Testing**: Unit, integration, and system tests
 
 ## Project Structure
 
 ```
-Bot/
-├── main.py                     # Entry point
-├── src/
-│   ├── __init__.py
-│   ├── version.py              # Version information module
-│   ├── bot_instance.py         # Bot instance with logging middleware
-│   └── handlers/
-│       ├── __init__.py
-│       ├── welcome.py          # /start and /help commands
-│       ├── rules.py            # /rules command
-│       └── message.py          # Echo handler (catch-all)
-├── docker/                     # Docker deployment with versioning
-│   ├── Dockerfile              # Multi-stage build
-│   ├── docker-compose.yml      # Services definition
-│   ├── build.sh               # Automated build script
-│   ├── deploy.sh              # Registry deployment
-│   └── readme.md              # Docker documentation
-├── requirements.txt
-├── .env                        # Environment variables
-├── bot.log                     # Log file (created when running)
-└── README.md
+Telegram-AI-chat-bot/
+├── main.py                              # Application entry point
+├── alembic.ini                          # Alembic configuration for migrations
+├── pytest.ini                           # Pytest configuration
+├── requirements.txt                     # Python dependencies
+├── src/                                 # Source code
+│   ├── bot_handler.py                   # Main bot controller
+│   ├── handler_registry.py              # Message handler registration with logging
+│   ├── telegraph_manager.py             # Telegraph article creation and management
+│   ├── channel_poster.py                # Telegram channel posting
+│   ├── reposting_orchestrator.py        # Orchestrates scraping → Telegraph → DB workflow
+│   ├── version.py                       # Version information
+│   ├── dao/                             # Data Access Layer
+│   │   ├── models/                      # SQLModel database models
+│   │   │   ├── user.py                  # User model
+│   │   │   ├── article.py               # Article model
+│   │   │   └── review.py                # Review model
+│   │   ├── core/
+│   │   │   └── database_manager.py      # Database connection management (Singleton)
+│   │   ├── config/
+│   │   │   └── database.py              # Database configuration
+│   │   └── alembic/                     # Database migrations
+│   │       ├── env.py                   # Alembic environment
+│   │       └── versions/                # Migration scripts
+│   └── scraping/                        # Web scraping modules
+│       ├── scraper.py                   # Abstract scraper base class
+│       ├── fetcher.py                   # Abstract HTTP fetcher base class
+│       ├── parser.py                    # Abstract HTML parser base class
+│       ├── review_scraper.py            # Concrete review scraper implementation
+│       ├── review_fetcher.py            # Concrete HTTP fetcher for reviews
+│       ├── review_parser.py             # Concrete HTML parser for reviews
+│       └── constants.py                 # Scraping constants
+├── tests/                               # Test suite
+│   ├── unit/                            # Unit tests
+│   ├── integration/                     # Integration tests
+│   │   ├── scraping/                    # Scraping integration tests
+│   │   └── system/                      # End-to-end system tests
+│   ├── run_bulk_tests.sh               # Bulk test runner script
+│   └── README.md                        # Testing documentation
+├── docker/                              # Docker deployment
+│   ├── Dockerfile                       # Multi-stage production build
+│   ├── docker-compose.yml               # Service orchestration
+│   ├── build.sh                         # Automated build with versioning
+│   ├── deploy.sh                        # Registry deployment script
+│   └── readme.md                        # Docker documentation
+├── docs/                                # Documentation
+│   ├── class_diagram.md                 # Mermaid class diagram
+│   └── telegraph_setup.md               # Telegraph setup guide
+└── requirements/                        # Requirements by environment
+    ├── base-requirements.txt            # Base dependencies
+    ├── dev-requirements.txt             # Development dependencies
+    └── prod-requirements.txt            # Production dependencies
 ```
+
+## Architecture Overview
+
+The bot follows a layered architecture with clear separation of concerns:
+
+- **Bot Handler Layer**: `BotHandler` and `HandlerRegistry` manage Telegram interactions
+- **Orchestration Layer**: `RepostingOrchestrator` coordinates the complete workflow
+- **Scraping Layer**: Abstract base classes (`Scraper`, `Fetcher`, `Parser`) with concrete implementations for extensibility
+- **Telegraph Layer**: `TelegraphManager` handles article publishing with automatic content splitting
+- **Data Layer**: SQLModel models with Alembic migrations for schema management
+- **Database Layer**: Singleton `DatabaseManager` for connection management
+
+See `docs/class_diagram.md` for a detailed Mermaid class diagram.
 
 ## Requirements
 
-* Python 3.8+
-* A Telegram bot token from [BotFather](https://t.me/BotFather)
+- Python 3.8+
+- A Telegram bot token from [BotFather](https://t.me/BotFather)
+- Telegraph account (for article publishing)
+- SQLite or PostgreSQL database
 
 ## Installation
 
-1. Clone this repository
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 1. Clone the Repository
 
-3. Create a `.env` file in the project root:
-   ```env
-   TELEGRAM_TOKEN=your_telegram_bot_token_here
-   
-   # Telegraph Configuration (for article publishing)
-   TELEGRAPH_ACCESS_TOKEN=your_telegraph_access_token_here
-   TELEGRAPH_SHORT_NAME=your_short_name
-   TELEGRAPH_AUTHOR_NAME=Your Author Name
-   TELEGRAPH_AUTHOR_URL=https://your-author-url.com/
-   TELEGRAPH_AUTH_URL=https://edit.telegra.ph/auth/your_auth_url_here
-   ```
+```bash
+git clone https://github.com/konstantinopolka/Telegram-AI-chat-bot.git
+cd Telegram-AI-chat-bot
+```
+
+### 2. Set Up Virtual Environment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Linux/macOS
+# or
+venv\Scripts\activate     # On Windows
+```
+
+### 3. Install Dependencies
+
+For development:
+
+```bash
+pip install -r requirements/dev-requirements.txt
+```
+
+For production:
+
+```bash
+pip install -r requirements/prod-requirements.txt
+```
+
+### 4. Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+# Telegram Bot Configuration
+TELEGRAM_TOKEN=your_telegram_bot_token_here
+
+# Telegraph Configuration (for article publishing)
+TELEGRAPH_ACCESS_TOKEN=your_telegraph_access_token_here
+TELEGRAPH_SHORT_NAME=your_short_name
+TELEGRAPH_AUTHOR_NAME=Your Author Name
+TELEGRAPH_AUTHOR_URL=https://your-author-url.com/
+TELEGRAPH_AUTH_URL=https://edit.telegra.ph/auth/your_auth_url_here
+
+# Database Configuration
+DATABASE_URL=sqlite:///dev.db
+ASYNC_DATABASE_URL=sqlite+aiosqlite:///dev.db
+# For PostgreSQL:
+# DATABASE_URL=postgresql://user:password@localhost/dbname
+# ASYNC_DATABASE_URL=postgresql+asyncpg://user:password@localhost/dbname
+```
+
+See `docs/telegraph_setup.md` for detailed Telegraph setup instructions.
+
+### 5. Initialize Database
+
+Run Alembic migrations to set up the database schema:
+
+```bash
+alembic upgrade head
+```
 
 ## Usage
 
-### Running the Bot
+### Running the Bot Locally
 
-**Local Development:**
+Start the bot with async polling:
+
 ```bash
 python main.py
 ```
 
-**Docker (Production):**
+The bot will:
+
+- Start polling for Telegram messages
+- Log all activity to console and `bot.log` file
+- Display detailed JSON logs of incoming/outgoing messages
+- Automatically handle user registration in the database
+
+### Docker Deployment (Production)
+
+Build and run with Docker:
+
 ```bash
 cd docker
-./build.sh           # Build with versioning
-docker-compose --env-file .env.docker up -d
+./build.sh                                      # Build with automatic versioning
+docker-compose --env-file .env.docker up -d     # Start services
 ```
 
-For detailed Docker setup and versioning system, see [`docker/readme.md`](docker/readme.md).
+For detailed Docker setup, versioning system, and deployment to registries, see [`docker/readme.md`](docker/readme.md)
 
-The bot will:
-- Start polling for messages
-- Log all activity to both console and `bot.log` file
-- Show detailed JSON logs of incoming updates and outgoing responses
+## Core Workflows
 
-### Example Logs
+### 1. Scraping and Publishing Articles
 
-When you send a message, you'll see detailed logs like:
+The `RepostingOrchestrator` manages the complete workflow:
 
-```
-2025-08-20 10:46:34,123 - src.bot_instance - INFO - Received update: {
-  "message_id": 36,
-  "from": {
-    "id": ,
-    "is_bot": ,
-    "first_name": "",
-    "username": "",
-    "language_code": "de"
-  },
-  "chat": {
-    "id": 674318335,
-    "first_name": "",
-    "username": "",
-    "type": "private"
-  },
-  "date": ,
-  "text": "what",
-  "content_type": "text"
-}
+```python
+from src.reposting_orchestrator import RepostingOrchestrator
+from src.scraping.review_scraper import ReviewScraper
+from src.telegraph_manager import TelegraphManager
 
-2025-08-20 10:46:34,456 - src.bot_instance - INFO - Sent: {
-  "ok": true,
-  "result": {
-    "message_id": ,
-    "from": {
-      "id": 7903107764,
-      "is_bot": true,
-      "first_name": "",
-      "username": ""
-    },
-    "chat": {
-      "id": 674318335,
-      "first_name": "",
-      "username": "",
-      "type": ""
-    },
-    "date": ,
-    "text": ""
-  }
-}
+# Initialize components
+scraper = ReviewScraper(base_url="https://example.com/review")
+telegraph = TelegraphManager()
+
+# Process entire review batch
+orchestrator = RepostingOrchestrator(
+    review_scraper=scraper,
+    telegraph_manager=telegraph,
+    db_session=db_session,
+    bot_handler=bot,
+    channel_poster=channel
+)
+
+# Scrape → Telegraph → Database → Channel
+review = await orchestrator.process_review_batch()
 ```
 
-## Available Commands
+**Workflow Steps:**
 
-* `/start` or `/help` - Shows welcome message
-* `/rules` - Shows bot rules
-* Any other text - Echoes back with "You said: [your message]"
+1. **Scrape**: `ReviewScraper` fetches and parses articles from source website
+2. **Publish**: `TelegraphManager` creates Telegraph articles (auto-splits if content is too large)
+3. **Save**: Articles and reviews saved to database with SQLModel
+4. **Post**: `ChannelPoster` shares articles to Telegram channel
 
-## Features Explained
+### 2. User Interaction
 
-### Polling vs Webhooks
+Users interact with the bot through message handlers:
 
-This bot uses **polling** instead of webhooks:
-- **Polling**: Bot asks Telegram "any new messages?" every few seconds
-- **Webhooks**: Telegram sends messages to your server URL
-- **Advantage of polling**: No need for public server, works locally
-- **Disadvantage**: Slightly higher latency
+- `/start` or `/help` - Welcome message and user registration
+- `/rules` - Bot rules
+- Additional handlers can be added via `HandlerRegistry`
 
-### Detailed Logging
+All interactions are logged in JSON format with full request/response details.
 
-The bot includes comprehensive logging:
-- **Incoming updates**: Full JSON of received messages
-- **Outgoing responses**: Full JSON of sent messages  
-- **Error handling**: Stack traces for debugging
-- **Process flow**: Handler execution logs
+## Testing
 
-### Modular Architecture
+The project includes comprehensive test coverage:
 
-Handlers are separated for maintainability:
-- `welcome.py`: Handles `/start` and `/help` commands
-- `rules.py`: Handles `/rules` command
-- `message.py`: Catch-all handler for other messages
-- `bot_instance.py`: Centralized bot instance with logging middleware
+### Run All Tests
+
+```bash
+# From project root
+./tests/run_bulk_tests.sh
+```
+
+### Run Specific Test Suites
+
+```bash
+# Unit tests only
+pytest tests/unit/
+
+# Integration tests
+pytest tests/integration/
+
+# Specific test file
+pytest tests/unit/test_telegraph_manager.py
+
+# With coverage
+pytest --cov=src tests/
+```
+
+### Test Structure
+
+- **Unit Tests** (`tests/unit/`): Test individual components in isolation
+- **Integration Tests** (`tests/integration/`): Test component interactions
+- **System Tests** (`tests/integration/system/`): End-to-end workflows
+
+See [`tests/README.md`](tests/README.md) for detailed testing documentation.
 
 ## Development
 
-### Adding New Handlers
+### Adding New Message Handlers
 
-1. Create a new file in `src/handlers/`
-2. Import the bot instance: `from src.bot_instance import bot`
-3. Add your handler with decorator: `@bot.message_handler(...)`
-4. Import the handler in `main.py`
+Handlers are registered through `HandlerRegistry`. To add a new handler:
 
-Example:
+1. **Add to `HandlerRegistry`** in `src/handler_registry.py`:
+
 ```python
-# src/handlers/weather.py
-from src.bot_instance import bot
+def _register_new_handler(self):
+    """Register your new handler"""
 
-@bot.message_handler(commands=['weather'])
-async def weather_command(message):
-    await bot.reply_to(message, "Today is sunny! ☀️")
+    @self.logged_message_handler(commands=['weather'])
+    async def weather_command(message):
+        try:
+            await self.bot.reply_to(message, "Today is sunny! ☀️")
+        except Exception as e:
+            self.logger.error(f"Error in weather_command: {e}", exc_info=True)
 ```
 
-### Log Levels
+2. **Call registration method** in `register_all_handlers()`:
 
-You can adjust logging level in `main.py`:
-- `logging.DEBUG`: Very verbose
-- `logging.INFO`: Default (recommended)
-- `logging.WARNING`: Only warnings and errors
-- `logging.ERROR`: Only errors
+```python
+def register_all_handlers(self):
+    self._register_welcome_handler()
+    self._register_rules_handler()
+    self._register_new_handler()  # Add your handler
+    self._register_echo_handler()  # Keep echo as last (catch-all)
+```
 
-## Example Interaction
+All handlers automatically get logging via the `logged_message_handler` decorator.
 
-**User:** `/start`  
-**Bot:** Hi, I am ServeBot. Just write me something and I will repeat it!
+### Adding New Scrapers
 
-**User:** Hello world!  
-**Bot:** You said: Hello world!
+To scrape content from a different source:
 
-**User:** `/rules`  
-**Bot:** Bot rules:
-1. Be respectful
-2. No spam  
-3. Have fun!
+1. **Create concrete implementations** of abstract base classes:
+
+   - Extend `Fetcher` for HTTP operations
+   - Extend `Parser` for HTML parsing
+   - Extend `Scraper` for complete workflow
+
+2. **Example structure**:
+
+```python
+from src.scraping import Fetcher, Parser, Scraper
+
+class MyFetcher(Fetcher):
+    def fetch_page(self, url: str) -> str:
+        # Your implementation
+        pass
+
+class MyParser(Parser):
+    def parse_listing_page(self, html: str) -> List[str]:
+        # Your implementation
+        pass
+
+class MyScraper(Scraper):
+    def __init__(self, base_url: str):
+        self.fetcher = MyFetcher(base_url)
+        self.parser = MyParser(base_url)
+```
+
+See `src/scraping/review_scraper.py` for a complete example.
+
+### Database Migrations
+
+When modifying database models, create a new Alembic migration:
+
+```bash
+# Auto-generate migration from model changes
+alembic revision --autogenerate -m "Description of changes"
+
+# Review the generated migration in src/dao/alembic/versions/
+
+# Apply the migration
+alembic upgrade head
+
+# Rollback if needed
+alembic downgrade -1
+```
+
+### Logging Configuration
+
+Adjust logging level in `main.py`:
+
+```python
+logging.basicConfig(
+    level=logging.INFO,  # Change to DEBUG, WARNING, or ERROR
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('bot.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+```
+
+## Key Design Patterns
+
+- **Singleton**: `DatabaseManager` ensures single database connection pool
+- **Abstract Factory**: Scraping module (`Scraper`, `Fetcher`, `Parser`) for extensibility
+- **Decorator**: `HandlerRegistry` wraps handlers with automatic logging
+- **Orchestrator**: `RepostingOrchestrator` coordinates complex multi-step workflows
+- **Repository**: `DatabaseManager` abstracts database operations
 
 ## Troubleshooting
 
 ### Bot doesn't respond
-- Check if `TELEGRAM_TOKEN` is set correctly in `.env`
-- Look at console/log output for error messages
-- Ensure no webhook is set (this bot uses polling)
 
-### To delete webhook (if needed):
+- Verify `TELEGRAM_TOKEN` in `.env` is correct
+- Check console/`bot.log` for error messages
+- Ensure no webhook is set (bot uses polling):
+
 ```bash
 curl -X POST "https://api.telegram.org/bot<YOUR_TOKEN>/deleteWebhook"
 ```
 
+### Database errors
+
+- Ensure migrations are up to date: `alembic upgrade head`
+- Check database URL in `.env`
+- Verify database file permissions (for SQLite)
+
+### Telegraph publishing fails
+
+- Verify Telegraph credentials in `.env`
+- Check `docs/telegraph_setup.md` for setup instructions
+- Ensure content doesn't contain disallowed HTML tags (see `src/scraping/constants.py`)
+
+### Tests failing
+
+- Install dev dependencies: `pip install -r requirements/dev-requirements.txt`
+- Check test-specific configuration in `pytest.ini`
+- Review test output for specific error details
+
+## Resources
+
+- **Documentation**: See `docs/` folder for detailed guides
+- **Class Diagram**: `docs/class_diagram.md` - Complete architecture overview
+- **Telegraph Setup**: `docs/telegraph_setup.md` - Telegraph configuration guide
+- **Testing Guide**: `tests/README.md` - Comprehensive testing documentation
+- **Docker Guide**: `docker/readme.md` - Docker deployment and versioning
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make changes and add tests
+4. Run test suite: `./tests/run_bulk_tests.sh`
+5. Commit changes: `git commit -am 'Add feature'`
+6. Push to branch: `git push origin feature/your-feature`
+7. Create Pull Request
+
+## License
+
+This project is open source. Please check the repository for license details.
+
 ---
 
-**Note:** Keep your `.env` file and bot token secure. Never commit them to version control.
+**Security Note:** Keep `.env` file and all tokens secure. Never commit secrets to version control. Use `.gitignore` to exclude sensitive files.
