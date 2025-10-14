@@ -34,7 +34,7 @@ class RepostingOrchestrator:
             processed_articles: List[Article] = await self.process_articles(raw_review_data)
             
             
-            # 3. Create review
+            # 4. Create review
             review = Review(
                 id=raw_review_data.get('review_id'),
                 source_url=raw_review_data['source_url'],
