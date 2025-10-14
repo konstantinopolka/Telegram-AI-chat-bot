@@ -24,9 +24,14 @@ class RepostingOrchestrator:
     async def process_review_batch(self) -> Review:
         """
         Full workflow for processing a batch of reviews:
-        1. Scrape articles from review site
-        2. Create validated schemas from raw data
+        1. Scrape articles data from review site
+        2. Create articles from raw data
         3. Process all articles from the scraped review
+            3.1 Create Telegraph articles
+            3.2 Save articles to data base
+            3.3 Post the Telegraph articles to the bot/channel
+        4. Create a review out of the articles
+        5. Save the review to the data base
         """
         try:
             # 1. Scrape all articles from review site
@@ -44,7 +49,7 @@ class RepostingOrchestrator:
             processed_articles: List[Article] = await self.process_articles(raw_review_data)
             
             
-            # 4. Create review
+            # 3. Create review
             review = Review(
                 id=raw_review_data.get('review_id'),
                 source_url=raw_review_data['source_url'],
@@ -75,7 +80,7 @@ class RepostingOrchestrator:
         
         for article in articles:
             try:
-                article = await self.process_single_article(article)
+                article: Article = await self.process_single_article(article)
                     
             except Exception as e:
                 logger.error(f"Error processing article '{article.title}': {e}", exc_info=True)
@@ -101,9 +106,8 @@ class RepostingOrchestrator:
             telegraph_urls = await self.telegraph.create_article(article)
             
             if telegraph_urls:
-                # Update the schema with telegraph URLs
+                # Update the article with telegraph URLs
                 article.telegraph_urls = telegraph_urls
-                
                 # 4. Save to database
                 logger.debug("Saving to database")
                 # TODO: Save Article object to database
@@ -155,8 +159,8 @@ class RepostingOrchestrator:
                 if 'review_id' not in article_dict:
                     article_dict['review_id'] = review_id
                     
-                article_schema = Article(**article_dict)
-                articles.append(article_schema)
+                article = Article(**article_dict)
+                articles.append(article)
             except Exception as e:
                 logger.error(f"Failed to create article schema: {e}", exc_info=True)
                 continue
