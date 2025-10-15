@@ -150,11 +150,24 @@ See `docs/telegraph_setup.md` for detailed Telegraph setup instructions.
 
 ### 5. Initialize Database
 
-Run Alembic migrations to set up the database schema:
+**⚠️ IMPORTANT:** The database is NOT created automatically. You must create it using Alembic migrations.
+
+Run this command from the project root:
 
 ```bash
 alembic upgrade head
 ```
+
+This will:
+
+- Create the database file (`dev.db` for SQLite) or tables (for PostgreSQL)
+- Create all tables: `reposting_bot_users`, `articles`, `reviews`
+- Apply all schema migrations
+
+**Documentation:**
+
+- **Comprehensive Database Guide**: [`docs/database_guide.md`](docs/database_guide.md) - Models, setup, usage, migrations
+- **Auto-Database Creation**: [`docs/auto_database_creation.md`](docs/auto_database_creation.md) - Options for automatic database initialization
 
 ## Usage
 
