@@ -147,4 +147,3 @@ alembic history --verbose
 - [Alembic Documentation](https://alembic.sqlalchemy.org/en/latest/)
 - [Project Database Guide](../../docs/database_guide.md) - Comprehensive database documentation
 
-##
