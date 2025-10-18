@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class Fetcher(ABC):
     
@@ -25,4 +29,4 @@ class Fetcher(ABC):
     
     def handle_request_error(self, error: Exception, url: str) -> None:
         """Handle request errors - can be overridden"""
-        print(f"Request failed for {url}: {error}")
+        logger.error(f"Request failed for {url}: {error}", exc_info=True)

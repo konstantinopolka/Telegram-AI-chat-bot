@@ -1,43 +1,66 @@
 #!/usr/bin/python
 
-# This is a simple echo bot using the decorator mechanism.
-# It echoes any incoming text messages.
 import asyncio
 import logging
 import sys
-from dotenv import load_dotenv
 import os
-from src.bot_handler import BotHandler
+from dotenv import load_dotenv
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('bot.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
+# Import logging configuration FIRST
+from src.logging_config import setup_logging, get_logger
+
+load_dotenv()
+
+def setup_logging_from_env():
+    """Setup logging from environment variables."""
+    setup_logging(
+        level=os.getenv("LOG_LEVEL", "INFO"),
+        log_file=os.getenv("LOG_FILE", "bot.log"),
+        log_to_console=os.getenv("LOG_TO_CONSOLE", "true").lower() == "true",
+        log_to_file=os.getenv("LOG_TO_FILE", "true").lower() == "true",
+        json_format=os.getenv("LOG_JSON_FORMAT", "false").lower() == "true",
+    )
+    
+# Get logger for this module
+logger = get_logger(__name__)
+
+
+from src.bot_handler import BotHandler
+from src.version import __version__
 
 async def main():
-    """Main function with proper exception handling"""
+    """Main entry point for the Telegram bot."""
+    logger.info("=" * 60)
+    logger.info(f"Starting Telegram AI Chat Bot v{__version__}")
+    logger.info("=" * 60)
+    
     try:
-        logger.info("Starting bot...")
+        # Initialize and start bot
         bot_handler = BotHandler()
+        logger.info("Bot handler initialized successfully")
+        
+        # Start polling
+        logger.info("Starting bot polling...")
         await bot_handler.start_polling()
         
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user (Ctrl+C)")
     except Exception as e:
-        logger.error(f"Critical error in bot polling: {e}", exc_info=True)
-        raise
+        logger.critical(f"Fatal error in main: {e}", exc_info=True)
+        sys.exit(1)
     finally:
-        logger.info("Bot stopped")
+        logger.info("Bot shutdown complete")
 
 if __name__ == "__main__":
+    # Setup logging first
+    setup_logging_from_env()
+    logger.debug("Logging system initialized from environment variables")
+    
     try:
+        logger.info("Starting application")
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
+        logger.info("Bot stopped by user (KeyboardInterrupt)")
     except Exception as e:
-        logger.error(f"Fatal error: {e}", exc_info=True)
+        logger.critical(f"Fatal error at top level: {e}", exc_info=True)
         sys.exit(1)

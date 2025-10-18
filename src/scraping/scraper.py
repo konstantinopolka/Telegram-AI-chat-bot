@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 from .constants import REQUIRED_FIELDS
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class Scraper(ABC):
@@ -48,4 +51,4 @@ class Scraper(ABC):
         """
         Handle scraping errors - can be overridden for custom error handling.
         """
-        print(f"Scraping error in {context}: {error}")
+        logger.error(f"Scraping error in {context}: {error}", exc_info=True)

@@ -11,6 +11,10 @@ from telegraph import Telegraph
 #local 
 from src.dao.models import Article
 from src.scraping.constants import ALLOWED_TAGS
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class TelegraphManager:
     
@@ -26,27 +30,45 @@ class TelegraphManager:
         
         
     def __setup_telegraph(self):
+        logger.info("Setting up Telegraph account")
         # --- Setup Telegraph ---
+        logger.debug("Creating base Telegraph object")
         self.telegraph = Telegraph()
 
         # First try to use environment variables
         if self.access_token and self.access_token != "test_token":
+            logger.info("Using Telegraph access token from environment variable")
+            logger.debug(f"Access token: {self.access_token[:10]}...")
             self.telegraph = Telegraph(access_token=self.access_token)
+            logger.debug("Telegraph client initialized with env token")
+            
         # Fallback to JSON file for backward compatibility
         elif os.path.exists(self.TOKEN_FILE):
+            logger.info(f"Loading Telegraph credentials from file: {self.TOKEN_FILE}")
             with open(self.TOKEN_FILE, 'r', encoding='utf-8') as f:
                 account_data = json.load(f)
+                logger.debug("Account data loaded from JSON file")
                 self.telegraph = Telegraph(access_token=account_data['access_token'])
+                logger.info("Telegraph client initialized from file")
+                
         else:
             # Create new account if no credentials available
+            logger.warning("No Telegraph credentials found, creating new account")
+            logger.info(f"Creating Telegraph account: short_name={self.short_name}, author={self.author_name}")
             account_data = self.telegraph.create_account(
                 short_name=self.short_name,
                 author_name=self.author_name,
                 author_url=self.author_url
             )
+            logger.info(f"New Telegraph account created: {account_data.get('short_name')}")
+            
             # Save to JSON file as backup (optional)
+            logger.debug(f"Saving account data to: {self.TOKEN_FILE}")
             with open(self.TOKEN_FILE, 'w', encoding='utf-8') as f:
                 json.dump(account_data, f, ensure_ascii=False, indent=4)
+            logger.info("Account credentials saved to file")
+            
+        logger.info("Telegraph setup complete")
 
 
     async def create_article(self, article: Article) -> List[str]:
@@ -54,9 +76,17 @@ class TelegraphManager:
         Create one or more Telegraph articles if the content exceeds limits.
         Returns list of Telegraph URLs.
         """
+        logger.info("=" * 60)
+        logger.info(f"Creating Telegraph article: '{article.title}'")
+        logger.debug(f"Original URL: {article.original_url}")
+        
         title = article.title
         content = article.content
+        logger.debug(f"Original content length: {len(content)} characters")
+        
+        logger.debug("Adding reposting date to content")
         content = self._add_reposting_date(article.content)  # Modify content first
+        logger.debug(f"Content length after adding date: {len(content)} characters")
         
         # Check if article will be split into multiple parts
         # We need to know this beforehand to reserve space for navigation links
@@ -71,8 +101,8 @@ class TelegraphManager:
             chunk_title = title if i == 0 else f"{title} (part {i+1})"
             
             try:
-                print(f"   📤 Creating Telegraph page {i+1}/{len(chunks)}: {chunk_title}")
-                print(f"      Content: {len(chunk)} chars, {len(chunk.encode('utf-8'))} bytes")
+                logger.info(f"Creating Telegraph page {i+1}/{len(chunks)}: {chunk_title}")
+                logger.debug(f"Content: {len(chunk)} chars, {len(chunk.encode('utf-8'))} bytes")
                 
                 page = self.telegraph.create_page(
                     title=chunk_title,
@@ -80,22 +110,22 @@ class TelegraphManager:
                     author_name=self.author_name
                 )
                 telegraph_urls.append(page['url'])
-                print(f"      ✅ Created: {page['url']}")
+                logger.info(f"Created Telegraph page: {page['url']}")
                 
             except Exception as e:
-                print(f"      ❌ Telegraph API error: {str(e)}")
+                logger.error(f"Telegraph API error: {str(e)}", exc_info=True)
                 # If we get a content too large error, try with smaller chunks
                 if "content too large" in str(e).lower() or "too long" in str(e).lower():
-                    print(f"      🔄 Content still too large, need smaller chunks")
+                    logger.warning("Content still too large, need smaller chunks")
                     # Could implement recursive splitting here
                 raise e
 
         # If multi-part article, add navigation links
         if len(telegraph_urls) > 1:
-            print(f"   🔗 Adding navigation links to {len(telegraph_urls)} parts...")
+            logger.info(f"Adding navigation links to {len(telegraph_urls)} parts")
             await self._add_navigation_links(telegraph_urls, chunks, title)
 
-        print(f"📄 Created {len(telegraph_urls)} Telegraph article(s)")
+        logger.info(f"Created {len(telegraph_urls)} Telegraph article(s)")
         return telegraph_urls
         
         
@@ -171,10 +201,10 @@ class TelegraphManager:
                     html_content=updated_content,
                     author_name=self.author_name
                 )
-                print(f"      🔗 Added navigation to part {i+1}")
+                logger.debug(f"Added navigation to part {i+1}")
                 
             except Exception as e:
-                print(f"      ❌ Failed to add navigation to part {i+1}: {str(e)}")
+                logger.error(f"Failed to add navigation to part {i+1}: {str(e)}", exc_info=True)
 
     def _create_navigation_links(self, current_index: int, total_parts: int, urls: List[str], title: str) -> dict:
         """Create navigation link HTML for current part."""
@@ -317,7 +347,7 @@ class TelegraphManager:
             MAX_CHARS = int(MAX_CONTENT_BYTES / 1.2) 
             
             reserved_info = f", Nav reserved: {nav_overhead}B" if reserve_space_for_nav else ""
-            print(f"   📏 Split limits: Title={title_bytes}B, Max content={MAX_CHARS} chars{reserved_info}")
+            logger.debug(f"Split limits: Title={title_bytes}B, Max content={MAX_CHARS} chars{reserved_info}")
             
             chunks = []
             current_chunk = ""
@@ -333,7 +363,7 @@ class TelegraphManager:
                     
                     if current_chunk:  # Don't add empty chunks
                         chunks.append(current_chunk)
-                        print(f"   📄 Chunk {len(chunks)}: {len(current_chunk)} chars, {len(current_chunk.encode('utf-8'))} bytes")
+                        logger.debug(f"Chunk {len(chunks)}: {len(current_chunk)} chars, {len(current_chunk.encode('utf-8'))} bytes")
                     current_chunk = block_html
                 else:
                     current_chunk += block_html
@@ -341,9 +371,9 @@ class TelegraphManager:
             # Add the last chunk
             if current_chunk:
                 chunks.append(current_chunk)
-                print(f"   📄 Chunk {len(chunks)}: {len(current_chunk)} chars, {len(current_chunk.encode('utf-8'))} bytes")
+                logger.debug(f"Chunk {len(chunks)}: {len(current_chunk)} chars, {len(current_chunk.encode('utf-8'))} bytes")
                 
-            print(f"   ✂️  Split into {len(chunks)} chunk(s)")
+            logger.info(f"Split into {len(chunks)} chunk(s)")
             return chunks
 
         

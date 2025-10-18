@@ -2,15 +2,23 @@ from typing import List, Dict, Any
 from bs4 import BeautifulSoup
 from .parser import Parser
 from .constants import ALLOWED_TAGS, IRRELEVANT_INFO_TAGS
+from src.logging_config import get_logger
 import requests
+
+logger = get_logger(__name__)
+
 
 class ReviewParser(Parser):
     def __init__(self, base_url: str):
+        logger.info(f"Initializing ReviewParser for: {base_url}")
         self.base_url = base_url
+        logger.debug("ReviewParser initialized")
         
     def parse_listing_page(self, html: str) -> List[str]:
         """Parse review page HTML to extract article URLs"""
+        logger.debug(f"Parsing listing page HTML ({len(html)} chars)")
         soup = self.create_soup(html)
+        logger.debug("BeautifulSoup object created")
      
 
         # Multiple selectors for both relative and absolute URLs
@@ -19,13 +27,20 @@ class ReviewParser(Parser):
             'h4 > a[href^="https://platypus1917.org/20"]'    # Absolute URLs
         ]
         
+        logger.debug(f"Searching for article links using {len(selectors)} CSS selectors")
         article_urls = []
         for selector in selectors:
             links = soup.select(selector)
-            article_urls.extend([url for link in links if (url := self.extract_link(link))])
+            logger.debug(f"Selector '{selector}' found {len(links)} links")
+            extracted = [url for link in links if (url := self.extract_link(link))]
+            article_urls.extend(extracted)
+            logger.debug(f"Extracted {len(extracted)} valid URLs from this selector")
         
         # Remove duplicates while preserving order
-        return list(dict.fromkeys(article_urls))
+        unique_urls = list(dict.fromkeys(article_urls))
+        logger.info(f"Parsed {len(unique_urls)} unique article URLs from listing page")
+        logger.debug(f"Article URLs: {unique_urls}")
+        return unique_urls
     
     def extract_link(self, link):
         href = link.get('href')
@@ -36,14 +51,32 @@ class ReviewParser(Parser):
     
     def parse_content_page(self, html: str, url: str) -> Dict[str, Any]:
         """Parse single article HTML to extract structured data"""
-        soup = self.create_soup(html)
+        logger.debug(f"Parsing content page: {url}")
+        logger.debug(f"HTML length: {len(html)} characters")
         
-        return {
-            'title': self.extract_title(soup),
-            'content': self.extract_content(soup),
+        soup = self.create_soup(html)
+        logger.debug("BeautifulSoup object created for content page")
+        
+        logger.debug("Extracting title")
+        title = self.extract_title(soup)
+        logger.debug(f"Title extracted: '{title}'")
+        
+        logger.debug("Extracting content")
+        content = self.extract_content(soup)
+        logger.debug(f"Content extracted: {len(content)} characters")
+        
+        logger.debug("Extracting metadata")
+        metadata = self.extract_metadata(soup)
+        logger.debug(f"Metadata extracted: {list(metadata.keys())}")
+        
+        result = {
+            'title': title,
+            'content': content,
             'original_url': url,
-            **self.extract_metadata(soup)
+            **metadata
         }
+        logger.info(f"Successfully parsed content page: '{title}' ({len(content)} chars)")
+        return result
         
     def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
         """Extract metadata from Platypus article"""
