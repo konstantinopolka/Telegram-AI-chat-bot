@@ -52,10 +52,15 @@ async def main():
         logger.info("Bot shutdown complete")
 
 if __name__ == "__main__":
+    # Setup logging first
+    setup_logging_from_env()
+    logger.debug("Logging system initialized from environment variables")
+    
     try:
+        logger.info("Starting application")
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
+        logger.info("Bot stopped by user (KeyboardInterrupt)")
     except Exception as e:
-        logger.error(f"Fatal error: {e}", exc_info=True)
+        logger.critical(f"Fatal error at top level: {e}", exc_info=True)
         sys.exit(1)

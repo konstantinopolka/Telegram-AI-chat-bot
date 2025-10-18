@@ -1,7 +1,9 @@
-import logging
 import json
 from src.dao.models import User
 from src.dao import AsyncSessionLocal
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class HandlerRegistry:
@@ -10,16 +12,16 @@ class HandlerRegistry:
     This separates handler registration logic from the main BotHandler class.
     """
     
-    def __init__(self, bot, logger):
+    def __init__(self, bot, passed_logger=None):
         """
-        Initialize the registry with bot instance and logger
+        Initialize the registry with bot instance and optional logger
         
         Args:
             bot: The AsyncTeleBot instance
-            logger: Logger instance for this registry
+            passed_logger: Optional logger instance (deprecated, uses module logger)
         """
         self.bot = bot
-        self.logger = logger
+        self.logger = logger  # Use module-level logger
         
         # Create the logged message handler decorator
         self.logged_message_handler = self._create_logged_message_handler()
@@ -67,77 +69,98 @@ class HandlerRegistry:
     
     def register_all_handlers(self):
         """Register all message handlers"""
+        logger.info("Registering all message handlers")
+        logger.debug("Registering welcome/start handler")
         self._register_welcome_handler()
+        logger.debug("Registering rules handler")
         self._register_rules_handler()
+        logger.debug("Registering echo handler")
         self._register_echo_handler()
+        logger.info("All handlers registered successfully")
     
     def _register_welcome_handler(self):
         """Register welcome/start command handler"""
+        logger.debug("Creating welcome command handler for /help and /start")
         
         @self.logged_message_handler(commands=['help', 'start'])
         async def send_welcome(message):
+            logger.info(f"Welcome command received from user_id={message.from_user.id}")
             try:
+                logger.debug("Opening async database session")
                 async with AsyncSessionLocal() as session:
-                    self.logger.info(f"Processing welcome command from user {message.from_user.id}")
+                    logger.debug(f"Querying database for user: {message.from_user.id}")
                     user = await session.get(User, message.from_user.id)
+                    
                     if not user:
+                        logger.info(f"New user detected: {message.from_user.id}")
+                        logger.debug("Creating new user object")
                         user = User(
                             telegram_id=message.from_user.id,
                             username=message.from_user.username,
                             first_name=message.from_user.first_name,
                             last_name=message.from_user.last_name,
                         )
+                        logger.debug("Adding user to session")
                         session.add(user)
+                        logger.debug("Committing new user to database")
                         await session.commit()
+                        logger.info(f"New user registered: {user.username or user.first_name} (ID: {user.telegram_id})")
                         await self.bot.reply_to(message, "Welcome, you have been registered!")
-                        self.logger.info("New user registered and welcomed.")
                     else:
+                        logger.info(f"Returning user: {user.username or user.first_name} (ID: {user.telegram_id})")
                         username = message.from_user.username or message.from_user.first_name or "User"
                         await self.bot.reply_to(message, f"Welcome back, {username}")
-                        self.logger.info("Returning user welcomed.")
+                        logger.debug("Welcome back message sent")
             except Exception as e:
-                self.logger.error(f"Error in send_welcome: {e}", exc_info=True)
+                logger.error(f"Error in send_welcome handler: {e}", exc_info=True)
                 try:
                     await self.bot.reply_to(message, "Sorry, something went wrong. Please try again.")
                 except Exception as reply_error:
-                    self.logger.error(f"Failed to send error message: {reply_error}")
+                    logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
     
     def _register_rules_handler(self):
         """Register rules command handler"""
+        logger.debug("Creating rules command handler for /rules")
         
         @self.logged_message_handler(commands=['rules'])
         async def send_rules(message):
+            logger.info(f"Rules command received from user_id={message.from_user.id}")
             try:
-                self.logger.info(f"Processing rules command from user {message.from_user.id}")
+                logger.debug("Preparing rules text")
                 text = 'Bot rules:\n1. Be respectful\n2. No spam\n3. Have fun!'
+                logger.debug(f"Sending rules to user {message.from_user.id}")
                 await self.bot.reply_to(message, text)
-                self.logger.info("Rules command processed successfully")
+                logger.info("Rules command processed successfully")
             except Exception as e:
-                self.logger.error(f"Error in send_rules: {e}", exc_info=True)
+                logger.error(f"Error in send_rules handler: {e}", exc_info=True)
                 try:
                     await self.bot.reply_to(message, "Sorry, something went wrong. Please try again.")
                 except Exception as reply_error:
-                    self.logger.error(f"Failed to send error message: {reply_error}")
+                    logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
     
     def _register_echo_handler(self):
         """Register echo message handler"""
+        logger.debug("Creating echo message handler (catches all messages)")
         
         @self.logged_message_handler(func=lambda message: True)
         async def echo_message(message):
+            logger.info(f"Echo handler triggered by user_id={message.from_user.id}")
             try:
                 if message.text:  # Only handle text messages
-                    self.logger.info(f"Processing echo message from user {message.from_user.id}")
+                    logger.debug(f"Text message received: '{message.text[:50]}...'")
+                    logger.debug("Echoing message back to user")
                     await self.bot.reply_to(message, f"You said: {message.text}")
-                    self.logger.info("Echo message processed successfully")
+                    logger.info("Echo message processed successfully")
                 else:
-                    self.logger.info(f"Processing non-text message from user {message.from_user.id}")
+                    logger.debug(f"Non-text message received, type: {message.content_type}")
                     await self.bot.reply_to(message, "I can only echo text messages!")
+                    logger.info("Non-text message handled")
             except Exception as e:
-                self.logger.error(f"Error in echo_message: {e}", exc_info=True)
+                logger.error(f"Error in echo_message handler: {e}", exc_info=True)
                 try:
                     await self.bot.reply_to(message, "Sorry, something went wrong. Please try again.")
                 except Exception as reply_error:
-                    self.logger.error(f"Failed to send error message: {reply_error}")
+                    logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
     
     def add_custom_handler(self, decorator_kwargs, handler_func):
         """

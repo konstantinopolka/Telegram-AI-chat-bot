@@ -2,6 +2,10 @@ from typing import List, Dict, Any
 from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
 from src.dao.models import Review, Article
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class RepostingOrchestrator:
     def __init__(self, review_scraper: ReviewScraper, telegraph_manager: TelegraphManager, db_session, bot_handler, channel_poster):
@@ -20,17 +24,17 @@ class RepostingOrchestrator:
         """
         try:
             # 1. Scrape all articles from review site
-            print("Step 1: Scraping articles from review site...")
+            logger.info("Step 1: Scraping articles from review site")
             raw_review_data: Dict[str, Any] = self.scraper.scrape_review_batch()
             
             if not raw_review_data:
-                print("No articles found to process")
+                logger.warning("No articles found to process")
                 return None
             
 
      
             # 3. Process all articles
-            print("Step 4: Processing all articles...")
+            logger.info("Step 4: Processing all articles")
             processed_articles: List[Article] = await self.process_articles(raw_review_data)
             
             
@@ -45,11 +49,11 @@ class RepostingOrchestrator:
             # TO-DO: 3. Save review in database 
             
             
-            print(f"Batch processing complete. Processed {len(processed_articles)} articles.")
+            logger.info(f"Batch processing complete. Processed {len(processed_articles)} articles")
             return review
             
         except Exception as e:
-            print(f"Error in batch processing: {e}")
+            logger.error(f"Error in batch processing: {e}", exc_info=True)
             return None
 
 
@@ -60,7 +64,7 @@ class RepostingOrchestrator:
         """
         
         # 2. Create article schemas from raw data
-        print("Step 2: Creating validated article schemas...")
+        logger.info("Step 2: Creating validated article schemas")
         articles = self._create_articles(raw_review_data)
         
         for article in articles:
@@ -68,7 +72,7 @@ class RepostingOrchestrator:
                 article = await self.process_single_article(article)
                     
             except Exception as e:
-                print(f"Error processing article '{article.title}': {e}")
+                logger.error(f"Error processing article '{article.title}': {e}", exc_info=True)
                 continue
         
         return articles
@@ -83,11 +87,11 @@ class RepostingOrchestrator:
         try:
             # 1. Check article_schema
             if not article:
-                print(f"No article schema provided")
+                logger.warning("No article schema provided")
                 return None
             
             # 3. Create Telegraph article
-            print(f"Creating Telegraph article for '{article.title}'...")
+            logger.info(f"Creating Telegraph article for '{article.title}'")
             telegraph_urls = await self.telegraph.create_article(article)
             
             if telegraph_urls:
@@ -95,25 +99,25 @@ class RepostingOrchestrator:
                 article.telegraph_urls = telegraph_urls
                 
                 # 4. Save to database
-                print("Saving to database...")
+                logger.debug("Saving to database")
                 # TODO: Save Article object to database
                 # article_obj = Article(**article_schema.dict())
                 # self.db.add(article_obj)
                 # self.db.commit()
                 
                 # 5. Post to channel
-                print("Posting to channel...")
+                logger.debug("Posting to channel")
                 # TODO: Post to Telegram channel
                 # await self.channel.post_article(article_schema.dict())
                 
-                print(f"Successfully processed single article: {article.title}")
+                logger.info(f"Successfully processed single article: {article.title}")
                 return article
             else:
-                print("Failed to create Telegraph article")
+                logger.warning("Failed to create Telegraph article")
                 return None
                 
         except Exception as e:
-            print(f"Error processing single article '{article.title if article else 'Unknown'}': {e}")
+            logger.error(f"Error processing single article '{article.title if article else 'Unknown'}': {e}", exc_info=True)
             return None
 
     async def preview_available_content(self) -> Dict[str, Any]:
@@ -123,7 +127,7 @@ class RepostingOrchestrator:
         try:
             return self.scraper.preview_content_summary()
         except Exception as e:
-            print(f"Error previewing content: {e}")
+            logger.error(f"Error previewing content: {e}", exc_info=True)
             return {'error': str(e)}
 
 
@@ -149,7 +153,7 @@ class RepostingOrchestrator:
                 article_schema = Article(**article_dict)
                 articles.append(article_schema)
             except Exception as e:
-                print(f"Failed to create article schema: {e}")
+                logger.error(f"Failed to create article schema: {e}", exc_info=True)
                 continue
                 
         return articles
