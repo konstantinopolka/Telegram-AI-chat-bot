@@ -4,6 +4,9 @@ from datetime import datetime, timedelta
 
 from src.dao.models.article import Article
 from src.dao.repositories.base_repository import BaseRepository
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class ArticleRepository(BaseRepository[Article]):
@@ -11,6 +14,7 @@ class ArticleRepository(BaseRepository[Article]):
     
     def __init__(self):
         super().__init__(Article)
+        logger.info("ArticleRepository initialized")
     
     async def get_by_url(self, url: str) -> Optional[Article]:
         """
@@ -22,11 +26,21 @@ class ArticleRepository(BaseRepository[Article]):
         Returns:
             Article instance or None
         """
-        async with self.db.get_async_session() as session:
-            result = await session.execute(
-                select(Article).where(Article.original_url == url)
-            )
-            return result.scalar_one_or_none()
+        logger.debug(f"Fetching article by URL: {url}")
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.execute(
+                    select(Article).where(Article.original_url == url)
+                )
+                article = result.scalar_one_or_none()
+                if article:
+                    logger.debug(f"Found article: {article.title} (ID={article.id})")
+                else:
+                    logger.debug(f"No article found with URL: {url}")
+                return article
+        except Exception as e:
+            logger.error(f"Failed to fetch article by URL {url}: {e}", exc_info=True)
+            raise
     
     async def get_by_review_id(self, review_id: int) -> List[Article]:
         """
@@ -38,11 +52,18 @@ class ArticleRepository(BaseRepository[Article]):
         Returns:
             List of articles
         """
-        async with self.db.get_async_session() as session:
-            result = await session.execute(
-                select(Article).where(Article.review_id == review_id)
-            )
-            return result.scalars().all()
+        logger.debug(f"Fetching articles for review_id: {review_id}")
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.execute(
+                    select(Article).where(Article.review_id == review_id)
+                )
+                articles = result.scalars().all()
+                logger.debug(f"Found {len(articles)} articles for review_id: {review_id}")
+                return articles
+        except Exception as e:
+            logger.error(f"Failed to fetch articles for review_id {review_id}: {e}", exc_info=True)
+            raise
     
     async def get_recent(self, limit: int = 10) -> List[Article]:
         """
@@ -54,13 +75,20 @@ class ArticleRepository(BaseRepository[Article]):
         Returns:
             List of recent articles
         """
-        async with self.db.get_async_session() as session:
-            result = await session.execute(
-                select(Article)
-                .order_by(Article.created_at.desc())
-                .limit(limit)
-            )
-            return result.scalars().all()
+        logger.debug(f"Fetching {limit} most recent articles")
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.execute(
+                    select(Article)
+                    .order_by(Article.created_at.desc())
+                    .limit(limit)
+                )
+                articles = result.scalars().all()
+                logger.debug(f"Retrieved {len(articles)} recent articles")
+                return articles
+        except Exception as e:
+            logger.error(f"Failed to fetch recent articles: {e}", exc_info=True)
+            raise
     
     async def search_by_title(self, search_term: str) -> List[Article]:
         """
@@ -72,13 +100,20 @@ class ArticleRepository(BaseRepository[Article]):
         Returns:
             List of matching articles
         """
-        async with self.db.get_async_session() as session:
-            result = await session.execute(
-                select(Article).where(
-                    Article.title.ilike(f"%{search_term}%")
+        logger.debug(f"Searching articles by title: '{search_term}'")
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.execute(
+                    select(Article).where(
+                        Article.title.ilike(f"%{search_term}%")
+                    )
                 )
-            )
-            return result.scalars().all()
+                articles = result.scalars().all()
+                logger.debug(f"Found {len(articles)} articles matching '{search_term}'")
+                return articles
+        except Exception as e:
+            logger.error(f"Failed to search articles by title '{search_term}': {e}", exc_info=True)
+            raise
     
     async def get_by_author(self, author_name: str) -> List[Article]:
         """
@@ -90,13 +125,20 @@ class ArticleRepository(BaseRepository[Article]):
         Returns:
             List of articles by author
         """
-        async with self.db.get_async_session() as session:
-            result = await session.execute(
-                select(Article).where(
-                    Article.authors.contains([author_name])
+        logger.debug(f"Fetching articles by author: {author_name}")
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.execute(
+                    select(Article).where(
+                        Article.authors.contains([author_name])
+                    )
                 )
-            )
-            return result.scalars().all()
+                articles = result.scalars().all()
+                logger.debug(f"Found {len(articles)} articles by author: {author_name}")
+                return articles
+        except Exception as e:
+            logger.error(f"Failed to fetch articles by author {author_name}: {e}", exc_info=True)
+            raise
     
     async def get_without_telegraph(self) -> List[Article]:
         """
@@ -105,14 +147,21 @@ class ArticleRepository(BaseRepository[Article]):
         Returns:
             List of unpublished articles
         """
-        async with self.db.get_async_session() as session:
-            result = await session.execute(
-                select(Article).where(
-                    (Article.telegraph_urls == None) | 
-                    (Article.telegraph_urls == [])
+        logger.debug("Fetching articles without Telegraph URLs")
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.execute(
+                    select(Article).where(
+                        (Article.telegraph_urls == None) | 
+                        (Article.telegraph_urls == [])
+                    )
                 )
-            )
-            return result.scalars().all()
+                articles = result.scalars().all()
+                logger.debug(f"Found {len(articles)} articles without Telegraph URLs")
+                return articles
+        except Exception as e:
+            logger.error(f"Failed to fetch articles without Telegraph URLs: {e}", exc_info=True)
+            raise
     
     async def update_telegraph_urls(
         self, 
@@ -129,12 +178,21 @@ class ArticleRepository(BaseRepository[Article]):
         Returns:
             Updated Article or None if not found
         """
-        article = await self.get_by_id(article_id)
-        if article:
-            article.telegraph_urls = telegraph_urls
-            return await self.update(article)
-        return None
+        logger.info(f"Updating Telegraph URLs for article_id {article_id}: {len(telegraph_urls)} URLs")
+        try:
+            article = await self.get_by_id(article_id)
+            if article:
+                article.telegraph_urls = telegraph_urls
+                updated_article = await self.update(article)
+                logger.info(f"Updated Telegraph URLs for article: {article.title}")
+                return updated_article
+            logger.warning(f"Cannot update Telegraph URLs - article not found: article_id={article_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to update Telegraph URLs for article_id {article_id}: {e}", exc_info=True)
+            raise
 
 
 # Singleton instance
 article_repository = ArticleRepository()
+logger.info("ArticleRepository singleton instance created")

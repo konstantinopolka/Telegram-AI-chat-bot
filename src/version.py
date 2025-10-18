@@ -3,11 +3,14 @@ Version and build information module.
 """
 import os
 
+# Simple version export for backward compatibility
+__version__ = os.getenv('APP_VERSION', '1.0.0')
+
 class BuildInfo:
     """Container for build and version information."""
     
     def __init__(self):
-        self.version = os.getenv('APP_VERSION', 'unknown')
+        self.version = os.getenv('APP_VERSION', '1.0.0')
         self.build_date = os.getenv('BUILD_DATE', 'unknown')
         self.git_commit = os.getenv('GIT_COMMIT', 'unknown')
     
