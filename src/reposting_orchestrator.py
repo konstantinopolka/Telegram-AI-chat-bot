@@ -77,9 +77,11 @@ class RepostingOrchestrator:
         Process multiple articles by calling process_single_article for each one.
         """
         
-        # 2. Create article schemas from raw data
+        # Create article schemas from raw data and add them
         logger.info("Step 2: Creating validated article schemas")
         articles: List[Article] = article_factory.from_scraper_data(raw_review_data)
+        for article in articles:
+            article = article_repository.add(article)
         
         for article in articles:
             try:
@@ -106,14 +108,14 @@ class RepostingOrchestrator:
             
             # 3. Create Telegraph article
             logger.info(f"Creating Telegraph article for '{article.title}'")
-            telegraph_urls = await self.telegraph.create_article(article)
+            telegraph_urls = await self.telegraph.create_telegraph_articles(article)
             
             if telegraph_urls:
                 # Update the article with telegraph URLs
                 article.telegraph_urls = telegraph_urls
                 # 4. Save to database
                 logger.debug("Saving to database")
-                article = article_repository.save(article)
+                article = article_repository.update_telegraph_urls(article.id, telegraph_urls)
                 
                 # 5. Post to channel
                 logger.debug("Posting to channel")

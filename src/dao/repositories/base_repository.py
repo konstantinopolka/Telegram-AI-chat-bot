@@ -26,7 +26,7 @@ class BaseRepository(Generic[ModelType]):
         self.db = db_manager
         logger.debug(f"Initialized {self.__class__.__name__} for model: {model.__name__}")
     
-    async def save(self, obj: ModelType) -> ModelType:
+    async def add(self, obj: ModelType) -> ModelType:
         """
         Create a new record.
         

@@ -290,7 +290,7 @@ class SingleReviewDebugger:
                 print(f"   Processing article {i}/{len(articles)}: {article.title}")
                 
                 try:
-                    telegraph_urls = await self.telegraph_manager.create_article(article)
+                    telegraph_urls = await self.telegraph_manager.create_telegraph_articles(article)
                     if telegraph_urls:
                         article.telegraph_urls = telegraph_urls
                         self.results.telegraph_urls.extend(telegraph_urls)

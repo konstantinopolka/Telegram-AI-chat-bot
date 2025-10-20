@@ -109,7 +109,7 @@ class ReviewRepository(BaseRepository[Review]):
         logger.info(f"Creating new review from URL: {source_url}")
         try:
             review = Review(source_url=source_url)
-            created_review = await self.save(review)
+            created_review = await self.add(review)
             logger.info(f"Successfully created review with ID: {created_review.id}")
             return created_review
         except Exception as e:
