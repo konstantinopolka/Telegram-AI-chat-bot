@@ -10,6 +10,7 @@ from src.telegraph_manager import TelegraphManager
 from src.dao.models import Review, Article
 from src.logging_config import get_logger
 from src.dao import article_repository, review_repository
+from src.article_factory import article_factory
 
 logger = get_logger(__name__)
 
@@ -77,7 +78,7 @@ class RepostingOrchestrator:
         
         # 2. Create article schemas from raw data
         logger.info("Step 2: Creating validated article schemas")
-        articles = self._create_articles(raw_review_data)
+        articles = article_factory.from_scraper_data(raw_review_data)
         
         for article in articles:
             try:
