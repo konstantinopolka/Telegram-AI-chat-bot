@@ -59,8 +59,8 @@ class RepostingOrchestrator:
                 articles=processed_articles,
                 created_at=raw_review_data.get('created_at')
             )
-            
-            # TO-DO: 3. Save review in database 
+            #4. Save review in database 
+            review = review_repository.add(review)
             
             
             logger.info(f"Batch processing complete. Processed {len(processed_articles)} articles")
@@ -98,7 +98,6 @@ class RepostingOrchestrator:
         Process a single article with validated schema:
         1. Create Telegraph article
         2. Save to DB
-        3. Post to channel
         """
         try:
             # 1. Check article_schema
@@ -116,13 +115,6 @@ class RepostingOrchestrator:
                 # 4. Save to database
                 logger.debug("Saving to database")
                 article = article_repository.update_telegraph_urls(article.id, telegraph_urls)
-                
-                # 5. Post to channel
-                logger.debug("Posting to channel")
-                # TODO: Post to Telegram channel
-                await self.channel_poster.post_article(article)
-                
-                logger.info(f"Successfully processed single article: {article.title}")
                 return article
             else:
                 logger.warning("Failed to create Telegraph article")
@@ -131,41 +123,3 @@ class RepostingOrchestrator:
         except Exception as e:
             logger.error(f"Error processing single article '{article.title if article else 'Unknown'}': {e}", exc_info=True)
             return None
-
-    async def preview_available_content(self) -> Dict[str, Any]:
-        """
-        Preview what content is available for scraping without actually scraping it.
-        """
-        try:
-            return self.scraper.preview_content_summary()
-        except Exception as e:
-            logger.error(f"Error previewing content: {e}", exc_info=True)
-            return {'error': str(e)}
-
-
-    def _create_articles(self, raw_review_data: Dict[str, Any]) -> List[Article]:
-        """
-        Create ArticleSchema instances from raw scraped data.
-        
-        Args:
-            raw_review_data: Dict containing 'articles' list and 'review_id'
-            
-        Returns:
-            List of validated ArticleSchema instances
-        """
-        articles = []
-        review_id = raw_review_data.get('review_id')
-        
-        for article_dict in raw_review_data.get('articles', []):
-            try:
-                # Add review_id to each article if not already present
-                if 'review_id' not in article_dict:
-                    article_dict['review_id'] = review_id
-                    
-                article = Article(**article_dict)
-                articles.append(article)
-            except Exception as e:
-                logger.error(f"Failed to create article schema: {e}", exc_info=True)
-                continue
-                
-        return articles

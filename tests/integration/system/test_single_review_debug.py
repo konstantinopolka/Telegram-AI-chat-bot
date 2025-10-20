@@ -11,6 +11,7 @@ This script allows step-by-step debugging of the complete workflow:
 Default test review: https://platypus1917.org/category/pr/issue-178/
 """
 
+
 import json
 import os
 import time
@@ -30,6 +31,7 @@ from src.scraping.review_scraper import ReviewScraper
 from src.reposting_orchestrator import RepostingOrchestrator  
 from src.telegraph_manager import TelegraphManager
 from src.dao.models import Article, Review
+from src.article_factory import article_factory
 
 
 class MockTelegraphManager:
@@ -262,7 +264,7 @@ class SingleReviewDebugger:
         """Debug article schema creation"""
         try:
             print("   📝 Creating Article schemas from raw data...")
-            articles = self.orchestrator._create_articles(raw_review_data)
+            articles = article_factory.from_scraper_data(raw_review_data)
             
             print(f"   ✅ Created {len(articles)} Article schemas")
             

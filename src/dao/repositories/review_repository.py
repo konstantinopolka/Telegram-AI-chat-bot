@@ -95,26 +95,6 @@ class ReviewRepository(BaseRepository[Review]):
         except Exception as e:
             logger.error(f"Failed to fetch recent reviews: {e}", exc_info=True)
             raise
-    
-    async def create_review(self, source_url: str) -> Review:
-        """
-        Create a new review.
-        
-        Args:
-            source_url: Review source URL
-            
-        Returns:
-            Created Review instance
-        """
-        logger.info(f"Creating new review from URL: {source_url}")
-        try:
-            review = Review(source_url=source_url)
-            created_review = await self.add(review)
-            logger.info(f"Successfully created review with ID: {created_review.id}")
-            return created_review
-        except Exception as e:
-            logger.error(f"Failed to create review from URL {source_url}: {e}", exc_info=True)
-            raise
 
 
 # Singleton instance

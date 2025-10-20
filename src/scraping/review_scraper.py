@@ -162,23 +162,6 @@ class ReviewScraper(Scraper):
             self.handle_scraping_error(e, "review batch scraping")
             return []
     
-    def preview_content_summary(self) -> Dict[str, Any]:
-        """
-        Get a summary of available content without full scraping.
-        Useful for previewing what will be scraped.
-        """
-        try:
-            article_urls = self.get_listing_urls()
-            return {
-                'base_url': self.base_url,
-                'total_articles': len(article_urls),
-                'article_urls': article_urls[:5],  # First 5 URLs as preview
-                'has_more': len(article_urls) > 5
-            }
-        except Exception as e:
-            self.handle_scraping_error(e, "preview content summary")
-            return {'error': str(e)}
-    
     def validate_content_data(self, content_data: Dict[str, Any]) -> bool:
         """
         Validate content data for review articles.
