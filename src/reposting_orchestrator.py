@@ -9,6 +9,7 @@ from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
 from src.dao.models import Review, Article
 from src.logging_config import get_logger
+from src.dao import article_repository, review_repository
 
 logger = get_logger(__name__)
 
@@ -110,9 +111,7 @@ class RepostingOrchestrator:
                 article.telegraph_urls = telegraph_urls
                 # 4. Save to database
                 logger.debug("Saving to database")
-                # TODO: Save Article object to database
-                self.db.add(article)
-                self.db.commit()
+                article = article_repository.save(article)
                 
                 # 5. Post to channel
                 logger.debug("Posting to channel")

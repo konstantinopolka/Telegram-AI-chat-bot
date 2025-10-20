@@ -120,7 +120,7 @@ class UserRepository(BaseRepository[User]):
                 phone=phone,
                 is_admin=is_admin
             )
-            created_user = await self.create(user)
+            created_user = await self.save(user)
             logger.info(f"Successfully created user: {username} with ID: {created_user.id}")
             return created_user
         except Exception as e:
