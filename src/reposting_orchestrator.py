@@ -11,6 +11,7 @@ from src.dao.models import Review, Article
 from src.logging_config import get_logger
 from src.dao import article_repository, review_repository
 from src.article_factory import article_factory
+from src.channel_poster import ChannelPoster
 
 logger = get_logger(__name__)
 
@@ -21,7 +22,7 @@ class RepostingOrchestrator:
         self.telegraph: TelegraphManager = telegraph_manager
         self.db: AsyncSession = db_session
         self.bot = bot_handler
-        self.channel = channel_poster
+        self.channel_poster: ChannelPoster = channel_poster
 
     async def process_review_batch(self) -> Review:
         """
@@ -78,7 +79,7 @@ class RepostingOrchestrator:
         
         # 2. Create article schemas from raw data
         logger.info("Step 2: Creating validated article schemas")
-        articles = article_factory.from_scraper_data(raw_review_data)
+        articles: List[Article] = article_factory.from_scraper_data(raw_review_data)
         
         for article in articles:
             try:
@@ -117,7 +118,7 @@ class RepostingOrchestrator:
                 # 5. Post to channel
                 logger.debug("Posting to channel")
                 # TODO: Post to Telegram channel
-                # await self.channel.post_article(article_schema.dict())
+                await self.channel_poster.post_article(article)
                 
                 logger.info(f"Successfully processed single article: {article.title}")
                 return article

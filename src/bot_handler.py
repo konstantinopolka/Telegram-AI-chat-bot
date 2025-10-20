@@ -18,7 +18,6 @@ class BotHandler:
         logger.info("Initializing BotHandler")
         logger.debug("Loading environment variables")
         load_dotenv()
-        self.logger = logger
         
         logger.debug("Reading TELEGRAM_TOKEN from environment")
         TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -97,7 +96,7 @@ class BotHandler:
         """Register all message handlers using HandlerRegistry"""
         logger.debug("Creating HandlerRegistry instance")
         # Create the handler registry - it will automatically register all handlers
-        self.handler_registry = HandlerRegistry(self.bot, self.logger)
+        self.handler_registry = HandlerRegistry(self.bot)
         logger.info(f"HandlerRegistry created and handlers registered")
     
     async def start_polling(self):

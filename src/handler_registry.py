@@ -13,7 +13,7 @@ class HandlerRegistry:
     This separates handler registration logic from the main BotHandler class.
     """
     
-    def __init__(self, bot, passed_logger=None):
+    def __init__(self, bot):
         """
         Initialize the registry with bot instance and optional logger
         
@@ -22,7 +22,6 @@ class HandlerRegistry:
             passed_logger: Optional logger instance (deprecated, uses module logger)
         """
         self.bot = bot
-        self.logger = logger  # Use module-level logger
         
         # Create the logged message handler decorator
         self.logged_message_handler = self._create_logged_message_handler()
@@ -56,7 +55,7 @@ class HandlerRegistry:
                         'content_type': message.content_type
                     }
                     
-                    self.logger.info(f"Received update: {json.dumps(update_data, ensure_ascii=False, indent=2)}")
+                    logger.info(f"Received update: {json.dumps(update_data, ensure_ascii=False, indent=2)}")
                     
                     # Call the original handler
                     return await handler_func(message)

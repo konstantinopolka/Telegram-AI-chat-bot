@@ -99,10 +99,19 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             Updated model instance
         """
-        obj_id = getattr(obj, 'id', 'N/A')
+        obj_id = getattr(obj, 'id', None)
+        
+        if obj_id is None:
+            raise ValueError(f"Cannot update {self.model.__name__} without ID. Use save() for new records.")
+        
         logger.debug(f"Updating {self.model.__name__} with ID: {obj_id}")
         try:
             async with self.db.get_async_session() as session:
+                existing = await session.get(self.model, obj_id)
+                if not existing:
+                    logger.error(f"{self.model.__name__} with ID {obj_id} not found")
+                    raise ValueError(f"{self.model.__name__} with ID {obj_id} not found")
+                    
                 session.add(obj)
                 await session.commit()
                 await session.refresh(obj)
