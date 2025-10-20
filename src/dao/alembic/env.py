@@ -9,7 +9,7 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import after adding to path - this will set up the metadata correctly
-from src.dao.database_instance import engine, DATABASE_URL
+from src.dao.core.database_manager import db_manager
 from sqlmodel import SQLModel
 # Import models to ensure they are registered with metadata
 import src.dao.models
@@ -26,13 +26,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-
-
-
 # Set the database URL dynamically from your models.py
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+config.set_main_option("sqlalchemy.url", db_manager.sync_database_url)
 
 
 def run_migrations_offline() -> None:
@@ -47,9 +42,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    # Use DATABASE_URL directly instead of going through config
     # (though config.get_main_option("sqlalchemy.url") would be the same value)
-    url = DATABASE_URL
+    url = db_manager.sync_database_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -68,8 +62,8 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    # Use your engine from models.py instead of creating a new one
-    connectable = engine
+    # Use sync engine from DatabaseManager
+    connectable = db_manager.sync_engine
 
     with connectable.connect() as connection:
         context.configure(
