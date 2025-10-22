@@ -66,7 +66,7 @@ class ReviewParser(Parser):
         logger.debug(f"Content extracted: {len(content)} characters")
         
         logger.debug("Extracting metadata")
-        metadata = self.extract_metadata(soup)
+        metadata = self.extract_metadata(soup, url)
         logger.debug(f"Metadata extracted: {list(metadata.keys())}")
         
         result = {
@@ -78,11 +78,11 @@ class ReviewParser(Parser):
         logger.info(f"Successfully parsed content page: '{title}' ({len(content)} chars)")
         return result
         
-    def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
+    def extract_metadata(self, soup: BeautifulSoup, url: str) -> Dict[str, Any]:
         """Extract metadata from Platypus article"""
         metadata = {
             'authors': self._extract_authors(soup),
-            'publication_date': self._extract_date(soup),
+            'publication_date': self._extract_date(soup, url),
         }
         return metadata
 
@@ -199,22 +199,48 @@ class ReviewParser(Parser):
             
         return [a for a in authors if a]
     
-    def _extract_date(self, soup: BeautifulSoup) -> str:
-        """Extract publication date"""
-        # Look for the specific pattern: "| February 2025" or "| July–August 2025"
+    def _extract_date(self, soup: BeautifulSoup, url: str):
+        """Extract publication date as a date object"""
+        from datetime import date
+        import re
+        
+        # Method 1: Extract from URL pattern (e.g., /2025/10/01/)
+        url_match = re.search(r'/(\d{4})/(\d{2})/(\d{2})/', url)
+        if url_match:
+            year, month, day = map(int, url_match.groups())
+            try:
+                return date(year, month, day)
+            except ValueError:
+                logger.warning(f"Invalid date from URL: {year}/{month}/{day}")
+        
+        # Method 2: Fallback to HTML pattern "| February 2025" or "| July–August 2025"
         container = soup.select_one('.bpf-content .has-text-align-right')
         if container:
             text = container.get_text(strip=True)
             # Split on "|" and take the date part
             if "|" in text:
                 date_part = text.split("|")[1].strip()
-                return date_part
+                
+                # Parse month name and year (e.g., "February 2025" or "July–August 2025")
+                # Take first month if range, set day to 1
+                month_year_match = re.match(r'(\w+)(?:–\w+)?\s+(\d{4})', date_part)
+                if month_year_match:
+                    month_name, year = month_year_match.groups()
+                    month_map = {
+                        'January': 1, 'February': 2, 'March': 3, 'April': 4,
+                        'May': 5, 'June': 6, 'July': 7, 'August': 8,
+                        'September': 9, 'October': 10, 'November': 11, 'December': 12
+                    }
+                    month_num = month_map.get(month_name)
+                    if month_num:
+                        try:
+                            return date(int(year), month_num, 1)
+                        except ValueError:
+                            logger.warning(f"Invalid date from HTML: {year}/{month_num}/1")
         
-        # Fallback to generic date selectors
-        date_elem = soup.select_one('time, .date, [class*="date"]')
-        if date_elem:
-            return date_elem.get('datetime') or self.clean_text(date_elem.get_text())
-        return ""
+        # Final fallback: return None
+        logger.warning(f"Could not extract date from URL: {url}")
+        return None
     
 
 

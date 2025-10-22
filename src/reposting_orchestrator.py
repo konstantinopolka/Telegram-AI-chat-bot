@@ -55,8 +55,7 @@ class RepostingOrchestrator:
             review = Review(
                 id=raw_review_data.get('review_id'),
                 source_url=raw_review_data['source_url'],
-                articles=processed_articles,
-                created_at=raw_review_data.get('created_at')
+                articles=processed_articles
             )
             #4. Save review in database 
             review = await review_repository.save(review)

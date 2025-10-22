@@ -25,8 +25,10 @@ from src.dao.repositories.article_repository import article_repository
 from src.dao.repositories.review_repository import review_repository
 from src.dao.core.database_manager import db_manager
 from src.logging_config import get_logger
+from dotenv import load_dotenv
 
 logger = get_logger(__name__)
+load_dotenv()
 
 # Test configuration - easily changeable
 TEST_REVIEW_URL = "https://platypus1917.org/category/pr/issue-173/"
@@ -169,11 +171,18 @@ class TestSingleReviewWorkflow:
         logger.info("STEP 5: CREATING AND SAVING REVIEW")
         logger.info("=" * 60)
         
+        review_id = raw_review_data.get('review_id')
+        
+        # Check if review already exists and delete it for clean test
+        if await review_repository.exists(review_id):
+            logger.info(f"Review with ID {review_id} already exists, deleting for clean test...")
+            await review_repository.delete(review_id)
+            logger.info(f"  ✓ Deleted existing review")
+        
         review = Review(
-            id=raw_review_data.get('review_id'),
+            id=review_id,
             source_url=raw_review_data['source_url'],
-            articles=saved_articles,
-            created_at=raw_review_data.get('created_at')
+            articles=saved_articles
         )
         
         logger.info(f"Created Review instance:")

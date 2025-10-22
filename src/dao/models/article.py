@@ -20,7 +20,7 @@ class Article(SQLModel, table=True):
         # Foreign key to reviews.id
     review_id: int = Field(foreign_key="reviews.id")
     telegraph_urls: Optional[List[str]] = Field(default_factory=list, sa_type=JSON)
-    created_at: date
+    publication_date: date
     authors: Optional[List[str]] = Field(default_factory=list, sa_type=JSON)
     
     # Relationship: many articles -> one review
