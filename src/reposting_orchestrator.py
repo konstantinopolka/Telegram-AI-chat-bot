@@ -17,10 +17,9 @@ logger = get_logger(__name__)
 
 
 class RepostingOrchestrator:
-    def __init__(self, review_scraper: ReviewScraper, telegraph_manager: TelegraphManager, db_session, bot_handler, channel_poster):
+    def __init__(self, review_scraper: ReviewScraper, telegraph_manager: TelegraphManager, bot_handler, channel_poster):
         self.scraper: ReviewScraper  = review_scraper
         self.telegraph: TelegraphManager = telegraph_manager
-        self.db: AsyncSession = db_session
         self.bot = bot_handler
         self.channel_poster: ChannelPoster = channel_poster
 
