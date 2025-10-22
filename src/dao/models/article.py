@@ -2,7 +2,7 @@
 from typing import Optional, List
 
 #third party libraries
-from datetime import datetime, timezone
+from datetime import date
 from sqlmodel import SQLModel, Field, Relationship, JSON
 
 
@@ -20,7 +20,7 @@ class Article(SQLModel, table=True):
         # Foreign key to reviews.id
     review_id: int = Field(foreign_key="reviews.id")
     telegraph_urls: Optional[List[str]] = Field(default_factory=list, sa_type=JSON)
-    created_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    created_at: date
     authors: Optional[List[str]] = Field(default_factory=list, sa_type=JSON)
     
     # Relationship: many articles -> one review
