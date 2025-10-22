@@ -82,7 +82,7 @@ class ReviewParser(Parser):
         """Extract metadata from Platypus article"""
         metadata = {
             'authors': self._extract_authors(soup),
-            'published_date': self._extract_date(soup),
+            'publication_date': self._extract_date(soup),
         }
         return metadata
 

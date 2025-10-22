@@ -86,6 +86,14 @@ class ReviewScraper(Scraper):
         """
         Scrape a single article by URL.
         Complete workflow: fetch → parse → validate → return article data.
+        
+        Returns:
+            Dict with keys:
+                - title (str): Article title
+                - content (str): Cleaned HTML content
+                - original_url (str): Source URL
+                - authors (List[str]): List of author names
+                - publication_date (str): Publication date
         """
         try:
             logger.info(f"Scraping article: {article_url}")

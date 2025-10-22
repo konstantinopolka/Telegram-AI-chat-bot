@@ -69,7 +69,7 @@ class TestReviewParserIntegration:
         assert "main content of the article discussing Marxism" in result["content"]
         assert result["original_url"] == url
         assert result["authors"] == ["John Doe", "Jane Smith"]
-        assert result["published_date"] == "February 2025"
+        assert result["publication_date"] == "February 2025"
         # Note: review_id is extracted separately via extract_review_id method
 
     def test_extract_metadata_integration(self):
@@ -79,7 +79,7 @@ class TestReviewParserIntegration:
 
         expected_metadata = {
             "authors": ["John Doe", "Jane Smith"],
-            "published_date": "February 2025"
+            "publication_date": "February 2025"
         }
         assert metadata == expected_metadata
 
@@ -343,7 +343,7 @@ class TestReviewParserComplexContentIntegration:
         
         # Verify metadata extraction
         assert result["authors"] == ["Desmund Hui", "Griffith Jones"]
-        assert result["published_date"] == "March–April 2025"
+        assert result["publication_date"] == "March–April 2025"
         # Note: review_id is extracted separately via extract_review_id method
         assert result["original_url"] == url
 
@@ -368,6 +368,6 @@ class TestReviewParserComplexContentIntegration:
         assert result["title"] == "Brief Article"
         assert "Short content." in result["content"]
         assert result["authors"] == ["Anonymous"]
-        assert result["published_date"] == "May 2025"
+        assert result["publication_date"] == "May 2025"
         # Note: review_id is extracted separately via extract_review_id method
         assert result["original_url"] == url

@@ -273,7 +273,7 @@ class SingleReviewDebugger:
                 print(f"      {i}. {article.title}")
                 print(f"         Authors: {article.authors}")
                 print(f"         Content length: {len(article.content)} chars")
-                print(f"         Published: {article.published_date}")
+                print(f"         Published: {article.created_at}")
                 
             return articles
             
