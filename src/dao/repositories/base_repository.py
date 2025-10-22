@@ -26,9 +26,10 @@ class BaseRepository(Generic[ModelType]):
         self.db = db_manager
         logger.debug(f"Initialized {self.__class__.__name__} for model: {model.__name__}")
     
-    async def add(self, obj: ModelType) -> ModelType:
+    async def save(self, obj: ModelType) -> ModelType:
         """
-        Create a new record.
+        Create a new record (INSERT).
+        Expects object without ID or with ID=None.
         
         Args:
             obj: Model instance to create
@@ -38,6 +39,10 @@ class BaseRepository(Generic[ModelType]):
         """
         logger.debug(f"Creating new {self.model.__name__} record")
         try:
+            # Warn if trying to save an object with existing ID
+            if hasattr(obj, 'id') and obj.id is not None:
+                logger.warning(f"save() called on object with existing ID: {obj.id}. Use update() instead.")
+            
             async with self.db.get_async_session() as session:
                 session.add(obj)
                 await session.commit()
@@ -47,6 +52,13 @@ class BaseRepository(Generic[ModelType]):
         except Exception as e:
             logger.error(f"Failed to create {self.model.__name__}: {e}", exc_info=True)
             raise
+    
+    async def add(self, obj: ModelType) -> ModelType:
+        """
+        Alias for save() - kept for backward compatibility.
+        Consider using save() for new code.
+        """
+        return await self.save(obj)
     
     async def get_by_id(self, id: int) -> Optional[ModelType]:
         """

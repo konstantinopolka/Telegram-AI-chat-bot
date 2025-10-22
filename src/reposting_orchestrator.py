@@ -59,7 +59,7 @@ class RepostingOrchestrator:
                 created_at=raw_review_data.get('created_at')
             )
             #4. Save review in database 
-            review = review_repository.add(review)
+            review = await review_repository.save(review)
             
             
             logger.info(f"Batch processing complete. Processed {len(processed_articles)} articles")
@@ -76,27 +76,38 @@ class RepostingOrchestrator:
         Process multiple articles by calling process_single_article for each one.
         """
         
-        # Create article schemas from raw data and add them
+        # Create article schemas from raw data
         logger.info("Step 2: Creating validated article schemas")
         articles: List[Article] = article_factory.from_scraper_data(raw_review_data)
-        for article in articles:
-            article = article_repository.add(article)
         
+        # Save articles to database first
+        logger.info("Step 3: Saving articles to database")
+        saved_articles: List[Article] = []
         for article in articles:
             try:
-                article: Article = await self.process_single_article(article)
-                    
+                saved_article = await article_repository.save(article)
+                saved_articles.append(saved_article)
+                logger.debug(f"Saved article ID: {saved_article.id}")
+            except Exception as e:
+                logger.error(f"Error saving article '{article.title}': {e}", exc_info=True)
+                continue
+        
+        # Process each article (create Telegraph pages, update with URLs)
+        logger.info("Step 4: Processing articles (creating Telegraph pages)")
+        for article in saved_articles:
+            try:
+                await self.process_single_article(article)
             except Exception as e:
                 logger.error(f"Error processing article '{article.title}': {e}", exc_info=True)
                 continue
         
-        return articles
+        return saved_articles
 
     async def process_single_article(self, article: Article) -> Article:
         """
         Process a single article with validated schema:
         1. Create Telegraph article
-        2. Save to DB
+        2. Update article in DB with Telegraph URLs
         """
         try:
             # 1. Check article_schema
@@ -104,17 +115,16 @@ class RepostingOrchestrator:
                 logger.warning("No article schema provided")
                 return None
             
-            # 3. Create Telegraph article
+            # 2. Create Telegraph article
             logger.info(f"Creating Telegraph article for '{article.title}'")
             telegraph_urls = await self.telegraph.create_telegraph_articles(article)
             
             if telegraph_urls:
-                # Update the article with telegraph URLs
-                article.telegraph_urls = telegraph_urls
-                # 4. Save to database
-                logger.debug("Saving to database")
-                article = article_repository.update_telegraph_urls(article.id, telegraph_urls)
-                return article
+                # 3. Update the article with telegraph URLs
+                logger.debug("Updating article with Telegraph URLs")
+                updated_article = await article_repository.update_telegraph_urls(article.id, telegraph_urls)
+                logger.info(f"Successfully processed article: {article.title}")
+                return updated_article
             else:
                 logger.warning("Failed to create Telegraph article")
                 return None

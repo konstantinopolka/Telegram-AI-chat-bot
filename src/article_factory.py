@@ -23,15 +23,15 @@ class ArticleFactory:
         
     
     @staticmethod
-    def from_scraper_data(self, raw_review_data: Dict[str, Any]) -> List[Article]:
+    def from_scraper_data(raw_review_data: Dict[str, Any]) -> List[Article]:
         """
-        Create ArticleSchema instances from raw scraped data.
+        Create Article instances from raw scraped data.
         
         Args:
             raw_review_data: Dict containing 'articles' list and 'review_id'
             
         Returns:
-            List of validated ArticleSchema instances
+            List of validated Article instances
         """
         articles = []
         review_id = raw_review_data.get('review_id')
@@ -44,10 +44,12 @@ class ArticleFactory:
                     
                 article = Article(**article_dict)
                 articles.append(article)
+                logger.debug(f"Created article: {article.title[:50]}...")
             except Exception as e:
                 logger.error(f"Failed to create article schema: {e}", exc_info=True)
                 continue
-                
+        
+        logger.info(f"Created {len(articles)} articles from scraper data")        
         return articles
     
     
