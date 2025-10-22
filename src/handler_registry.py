@@ -108,12 +108,16 @@ class HandlerRegistry:
     async def __save_user(self, message, session: AsyncSession):
         logger.info(f"New user detected: {message.from_user.id}")
         logger.debug("Creating new user object")
+        
+        # Safely extract phone number if available
+        phone = getattr(message.from_user, 'phone', None) if hasattr(message, 'from_user') else None
+        
         user = User(
                 telegram_id=message.from_user.id,
                 username=message.from_user.username,
                 first_name=message.from_user.first_name,
                 last_name=message.from_user.last_name,
-                phone=message.from_user.phone 
+                phone=phone
         )
         logger.debug("Adding user to session")
         logger.debug("Committing new user to database")

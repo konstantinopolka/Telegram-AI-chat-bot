@@ -29,20 +29,36 @@ class BaseRepository(Generic[ModelType]):
     async def save(self, obj: ModelType) -> ModelType:
         """
         Create a new record (INSERT).
-        Expects object without ID or with ID=None.
         
         Args:
             obj: Model instance to create
             
         Returns:
             Created model instance with ID populated
+            
+        Raises:
+            ValueError: If object ID already exists in database (should use update() instead)
         """
         logger.debug(f"Creating new {self.model.__name__} record")
+        
+        # Check if ID is set and already exists in database
+        if hasattr(obj, 'id') and obj.id is not None:
+            try:
+                async with self.db.get_async_session() as session:
+                    existing = await session.get(self.model, obj.id)
+                    if existing:
+                        raise ValueError(
+                            f"save() called on object with ID {obj.id} that already exists in database. "
+                            "Use update() instead."
+                        )
+            except ValueError:
+                # Re-raise ValueError from above
+                raise
+            except Exception as e:
+                # Log other exceptions but continue with save
+                logger.warning(f"Could not check for existing {self.model.__name__} with ID {obj.id}: {e}")
+        
         try:
-            # Warn if trying to save an object with existing ID
-            if hasattr(obj, 'id') and obj.id is not None:
-                logger.warning(f"save() called on object with existing ID: {obj.id}. Use update() instead.")
-            
             async with self.db.get_async_session() as session:
                 session.add(obj)
                 await session.commit()

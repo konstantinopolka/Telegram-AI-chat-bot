@@ -15,6 +15,7 @@ import pytest
 import asyncio
 import os
 from typing import List, Dict, Any
+from datetime import date
 
 # Local imports
 from src.scraping.review_scraper import ReviewScraper
@@ -173,7 +174,7 @@ class TestSingleReviewWorkflow:
         
         review_id = raw_review_data.get('review_id')
         
-        # Check if review already exists and delete it for clean test
+        # Check if review with this ID already exists and delete it for clean test
         if await review_repository.exists(review_id):
             logger.info(f"Review with ID {review_id} already exists, deleting for clean test...")
             await review_repository.delete(review_id)
@@ -219,7 +220,9 @@ class TestSingleReviewWorkflow:
             assert article.id is not None, f"Article {i} has no ID"
             assert article.title, f"Article {i} has no title"
             assert article.content, f"Article {i} has no content"
-            logger.info(f"  Article {i}: ID={article.id}, Title={article.title[:40]}...")
+            assert article.publication_date is not None, f"Article {i} has no publication_date"
+            assert isinstance(article.publication_date, date), f"Article {i} publication_date is not a date object"
+            logger.info(f"  Article {i}: ID={article.id}, Title={article.title[:40]}..., Date={article.publication_date}")
         
         # ============================================================
         # TEST COMPLETE
@@ -227,11 +230,11 @@ class TestSingleReviewWorkflow:
         logger.info("\n" + "=" * 80)
         logger.info("TEST COMPLETED SUCCESSFULLY!")
         logger.info("=" * 80)
-        logger.info(f"Summary:")
+        logger.info("Summary:")
         logger.info(f"  - Review ID: {saved_review.id}")
         logger.info(f"  - Articles processed: {len(saved_articles)}")
-        logger.info(f"  - Telegraph articles created: {sum(1 for a in saved_articles if a.telegraph_urls)}")
-        logger.info(f"  - All data verified in database: ✓")
+        logger.info(f"  - Telegraph articles created: {sum(bool(a.telegraph_urls) for a in saved_articles)}")
+        logger.info("  - All data verified in database: ✓")
         logger.info("=" * 80)
 
 

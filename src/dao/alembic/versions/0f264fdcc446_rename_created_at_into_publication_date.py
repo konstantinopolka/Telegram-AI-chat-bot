@@ -26,13 +26,17 @@ def upgrade() -> None:
     inspector = sa.inspect(conn)
     columns = [col['name'] for col in inspector.get_columns('articles')]
     
-    if 'publication_date' in columns and 'created_at' in columns:
-        # Both exist, just copy data and drop created_at
+    if 'created_at' not in columns:
+        # Migration already complete
+        return
+    
+    if 'publication_date' in columns:
+        # Both exist (from failed migration), just copy data and drop created_at
         op.execute('UPDATE articles SET publication_date = created_at WHERE publication_date IS NULL')
         with op.batch_alter_table('articles', schema=None) as batch_op:
             batch_op.alter_column('publication_date', nullable=False)
             batch_op.drop_column('created_at')
-    elif 'created_at' in columns and 'publication_date' not in columns:
+    else:
         # Normal case: rename created_at to publication_date
         with op.batch_alter_table('articles', schema=None) as batch_op:
             batch_op.add_column(sa.Column('publication_date', sa.Date(), nullable=True))
@@ -42,7 +46,6 @@ def upgrade() -> None:
         with op.batch_alter_table('articles', schema=None) as batch_op:
             batch_op.alter_column('publication_date', nullable=False)
             batch_op.drop_column('created_at')
-    # else: migration already complete
 
     # ### end Alembic commands ###
 
