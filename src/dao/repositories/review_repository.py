@@ -16,6 +16,19 @@ class ReviewRepository(BaseRepository[Review]):
         super().__init__(Review)
         logger.info("ReviewRepository initialized")
     
+    async def get_by_natural_key(self, obj: Review) -> Optional[Review]:
+        """
+        Get review by natural key (business ID).
+        
+        For reviews, the natural key is the review ID itself -
+        it comes from the source (issue number) and defines uniqueness.
+        """
+        if obj.id is None:
+            logger.warning("Cannot check natural key for Review without ID")
+            return None
+        
+        return await self.get_by_id(obj.id)
+    
     async def get_by_url(self, url: str) -> Optional[Review]:
         """
         Get review by source URL.

@@ -1,7 +1,7 @@
 from typing import Generic, TypeVar, Optional, List, Type
 from sqlmodel import SQLModel, select
 from sqlalchemy import func
-
+from abc import ABC, abstractmethod
 from src.dao.core.database_manager import db_manager
 from src.logging_config import get_logger
 
@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 ModelType = TypeVar("ModelType", bound=SQLModel)
 
 
-class BaseRepository(Generic[ModelType]):
+class BaseRepository(ABC, Generic[ModelType]):
     """
     Abstract base repository with common CRUD operations.
     
@@ -41,22 +41,15 @@ class BaseRepository(Generic[ModelType]):
         """
         logger.debug(f"Creating new {self.model.__name__} record")
         
-        # Check if ID is set and already exists in database
-        if hasattr(obj, 'id') and obj.id is not None:
-            try:
-                async with self.db.get_async_session() as session:
-                    existing = await session.get(self.model, obj.id)
-                    if existing:
-                        raise ValueError(
-                            f"save() called on object with ID {obj.id} that already exists in database. "
-                            "Use update() instead."
-                        )
-            except ValueError:
-                # Re-raise ValueError from above
-                raise
-            except Exception as e:
-                # Log other exceptions but continue with save
-                logger.warning(f"Could not check for existing {self.model.__name__} with ID {obj.id}: {e}")
+        # Check if object already exists by natural key
+        existing = await self.get_by_natural_key(obj)
+        if existing:
+            # Get a meaningful identifier for the error message
+            identifier = self._get_identifier_for_logging(obj, existing)
+            raise ValueError(
+                f"save() called on {self.model.__name__} that already exists in database "
+                f"(identified by: {identifier}). Use update() instead."
+            )
         
         try:
             async with self.db.get_async_session() as session:
@@ -67,54 +60,6 @@ class BaseRepository(Generic[ModelType]):
                 return obj
         except Exception as e:
             logger.error(f"Failed to create {self.model.__name__}: {e}", exc_info=True)
-            raise
-    
-    async def add(self, obj: ModelType) -> ModelType:
-        """
-        Alias for save() - kept for backward compatibility.
-        Consider using save() for new code.
-        """
-        return await self.save(obj)
-    
-    async def get_by_id(self, id: int) -> Optional[ModelType]:
-        """
-        Get record by ID.
-        
-        Args:
-            id: Primary key value
-            
-        Returns:
-            Model instance or None if not found
-        """
-        logger.debug(f"Fetching {self.model.__name__} by ID: {id}")
-        try:
-            async with self.db.get_async_session() as session:
-                result = await session.get(self.model, id)
-                if result:
-                    logger.debug(f"Found {self.model.__name__} with ID: {id}")
-                else:
-                    logger.debug(f"{self.model.__name__} with ID {id} not found")
-                return result
-        except Exception as e:
-            logger.error(f"Failed to fetch {self.model.__name__} by ID {id}: {e}", exc_info=True)
-            raise
-    
-    async def get_all(self) -> List[ModelType]:
-        """
-        Get all records.
-        
-        Returns:
-            List of all model instances
-        """
-        logger.debug(f"Fetching all {self.model.__name__} records")
-        try:
-            async with self.db.get_async_session() as session:
-                result = await session.execute(select(self.model))
-                records = result.scalars().all()
-                logger.debug(f"Retrieved {len(records)} {self.model.__name__} records")
-                return records
-        except Exception as e:
-            logger.error(f"Failed to fetch all {self.model.__name__} records: {e}", exc_info=True)
             raise
     
     async def update(self, obj: ModelType) -> ModelType:
@@ -149,6 +94,85 @@ class BaseRepository(Generic[ModelType]):
             logger.error(f"Failed to update {self.model.__name__} with ID {obj_id}: {e}", exc_info=True)
             raise
     
+    async def get_by_id(self, id: int) -> Optional[ModelType]:
+        """
+        Get record by ID.
+        Pay attention that id might not suffice to define if two objects in 
+        the database are equal. ID might be a surrogate key.
+        Use get_by_natural_key instead
+        Args:
+            id: Primary key value
+            
+        Returns:
+            Model instance or None if not found
+        """
+        logger.debug(f"Fetching {self.model.__name__} by ID: {id}")
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.get(self.model, id)
+                if result:
+                    logger.debug(f"Found {self.model.__name__} with ID: {id}")
+                else:
+                    logger.debug(f"{self.model.__name__} with ID {id} not found")
+                return result
+        except Exception as e:
+            logger.error(f"Failed to fetch {self.model.__name__} by ID {id}: {e}", exc_info=True)
+            raise     
+    @abstractmethod
+    async def get_by_natural_key(self, obj: ModelType) -> Optional[ModelType]:
+        """
+        Get existing record by natural/business key (not database ID).
+        
+        Each subclass defines what makes an object "the same" in business terms.
+        Examples:
+        - Article: same original_url
+        - Review: same id (business ID from source)
+        - User: same telegram_id
+        
+        Args:
+            obj: Model instance with natural key fields populated
+            
+        Returns:
+            Existing model instance or None
+        """
+        pass
+    
+    async def exists_by_natural_key(self, obj: ModelType) -> bool:
+        """
+        Check if record exists by natural key.
+        
+        Args:
+            obj: Model instance with natural key fields populated
+            
+        Returns:
+            True if exists, False otherwise
+        """
+        logger.debug(f"Checking if {self.model.__name__} exists by natural key")
+        existing = await self.get_by_natural_key(obj)
+        exists = existing is not None
+        logger.debug(f"{self.model.__name__} exists by natural key: {exists}")
+        return exists
+    
+    async def exists_by_id(self, id: int) -> bool:
+        """
+        Check if record exists.
+        
+        Pay attention that id might not suffice to define if two objects in 
+        the database are equal. ID might be a surrogate key.
+        Use exists_by_natural_key instead
+        
+        Args:
+            id: Primary key value
+            
+        Returns:
+            True if exists, False otherwise
+        """
+        logger.debug(f"Checking if {self.model.__name__} exists with ID: {id}")
+        obj = await self.get_by_id(id)
+        exists = obj is not None
+        logger.debug(f"{self.model.__name__} with ID {id} exists: {exists}")
+        return exists
+    
     async def delete(self, id: int) -> bool:
         """
         Delete record by ID.
@@ -173,23 +197,23 @@ class BaseRepository(Generic[ModelType]):
         except Exception as e:
             logger.error(f"Failed to delete {self.model.__name__} with ID {id}: {e}", exc_info=True)
             raise
-    
-    async def exists(self, id: int) -> bool:
+    async def get_all(self) -> List[ModelType]:
         """
-        Check if record exists.
+        Get all records.
         
-        Args:
-            id: Primary key value
-            
         Returns:
-            True if exists, False otherwise
+            List of all model instances
         """
-        logger.debug(f"Checking if {self.model.__name__} exists with ID: {id}")
-        obj = await self.get_by_id(id)
-        exists = obj is not None
-        logger.debug(f"{self.model.__name__} with ID {id} exists: {exists}")
-        return exists
-    
+        logger.debug(f"Fetching all {self.model.__name__} records")
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.execute(select(self.model))
+                records = result.scalars().all()
+                logger.debug(f"Retrieved {len(records)} {self.model.__name__} records")
+                return records
+        except Exception as e:
+            logger.error(f"Failed to fetch all {self.model.__name__} records: {e}", exc_info=True)
+            raise
     async def count(self) -> int:
         """
         Count total records.
@@ -209,3 +233,21 @@ class BaseRepository(Generic[ModelType]):
         except Exception as e:
             logger.error(f"Failed to count {self.model.__name__} records: {e}", exc_info=True)
             raise
+        
+    def _get_identifier_for_logging(self, obj: ModelType, existing: ModelType = None) -> str:
+        """
+        Get a meaningful identifier for logging.
+        Override in subclasses for better messages.
+        
+        Args:
+            obj: The object being saved
+            existing: The existing object found (if any)
+            
+        Returns:
+            String identifier for logging
+        """
+        target = existing if existing else obj
+        if hasattr(target, 'id') and target.id is not None:
+            return f"ID={target.id}"
+        return "natural key"
+    
