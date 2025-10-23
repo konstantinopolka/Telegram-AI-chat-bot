@@ -2,7 +2,6 @@
 from typing import List, Dict, Any
 
 #third party libraries
-from sqlalchemy.ext.asyncio import AsyncSession
 
 #local
 from src.scraping.review_scraper import ReviewScraper
@@ -58,7 +57,7 @@ class RepostingOrchestrator:
                 articles=processed_articles
             )
             #4. Save review in database 
-            review = await review_repository.save(review)
+            review = await review_repository.save_if_not_exists(review)
             
             
             logger.info(f"Batch processing complete. Processed {len(processed_articles)} articles")
@@ -84,7 +83,7 @@ class RepostingOrchestrator:
         saved_articles: List[Article] = []
         for article in articles:
             try:
-                saved_article = await article_repository.save(article)
+                saved_article = await article_repository.save_if_not_exists(article)
                 saved_articles.append(saved_article)
                 logger.debug(f"Saved article ID: {saved_article.id}")
             except Exception as e:
