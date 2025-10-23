@@ -15,7 +15,7 @@ class Article(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str = Field(max_length=255)
     content: str 
-    original_url: str = Field(max_length=500)
+    original_url: str = Field(max_length=500, unique=True, index=True)
 
         # Foreign key to reviews.id
     review_id: int = Field(foreign_key="reviews.id")
