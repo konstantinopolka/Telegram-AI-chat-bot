@@ -62,6 +62,31 @@ class BaseRepository(ABC, Generic[ModelType]):
             logger.error(f"Failed to create {self.model.__name__}: {e}", exc_info=True)
             raise
     
+    
+    async def save_if_not_exists(self, obj: ModelType) -> tuple[ModelType, bool]:
+        """
+        Save object only if it doesn't exist by natural key.
+        Safe alternative to save() that doesn't raise on duplicates.
+        
+        Args:
+            obj: Model instance to create
+            
+        Returns:
+            Tuple of (model instance, was_created)
+            - If created: (new_obj, True)
+            - If exists: (existing_obj, False)
+        """
+        logger.debug(f"Save {self.model.__name__} if not exists")
+        
+        existing = await self.get_by_natural_key(obj)
+        if existing:
+            identifier = self._get_identifier_for_logging(obj, existing)
+            logger.info(f"{self.model.__name__} already exists ({identifier}), skipping save")
+            return existing, False
+        
+        saved = await self.save(obj)
+        return saved, True
+    
     async def update(self, obj: ModelType) -> ModelType:
         """
         Update existing record.
