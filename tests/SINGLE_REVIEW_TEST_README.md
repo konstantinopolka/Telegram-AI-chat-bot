@@ -2,17 +2,21 @@
 
 ## Overview
 
-`test_single_review.py` is a comprehensive integration test that validates the complete workflow for processing a single review from start to finish.
+`test_single_review.py` is a comprehensive integration test that validates the complete workflow for processing a single review from start to finish **using the RepostingOrchestrator**.
 
 ## What It Tests
 
-The test covers the entire review processing pipeline:
+The test validates the entire review processing pipeline through the orchestrator:
 
-1. **Scraping** - Fetches review and all articles from a live URL
-2. **Data Transformation** - Creates Article instances using ArticleFactory
-3. **Telegraph Publishing** - Creates Telegraph articles (if token configured)
-4. **Database Persistence** - Saves articles and review to database
-5. **Data Verification** - Retrieves and validates all saved data
+1. **Orchestrator Setup** - Initializes scraper, telegraph manager, and channel poster
+2. **Complete Workflow** - Calls `process_review_batch()` which handles:
+   - Scraping review and all articles from a live URL
+   - Creating Article instances using ArticleFactory
+   - Saving articles to database
+   - Creating Telegraph articles (if token configured)
+   - Creating Review with associated articles
+   - Saving Review to database
+3. **Data Verification** - Retrieves and validates all saved data
 
 ## Configuration
 
@@ -56,56 +60,47 @@ python tests/test_single_review.py
 
 ## Test Output
 
-The test provides detailed logging for each step:
+The test provides detailed logging showing the orchestrator workflow:
 
 ```
 ==========================================
-STEP 1: SCRAPING REVIEW AND ARTICLES
+SETUP: INITIALIZING ORCHESTRATOR
 ==========================================
-✓ Scraped 8 articles
-✓ Review ID: 173
-✓ Source URL: https://platypus1917.org/category/pr/issue-173/
+✓ Created ReviewScraper for: https://platypus1917.org/category/pr/issue-173/
+✓ Created TelegraphManager with access token
+✓ Created mock bot handler
+✓ Created ChannelPoster
+✓ Created RepostingOrchestrator
 
 ==========================================
-STEP 2: CREATING ARTICLE INSTANCES
+EXECUTING: PROCESSING REVIEW BATCH
 ==========================================
+Step 1: Scraping articles from review site
+✓ Scraped 8 articles
+Step 2: Creating validated article schemas
 ✓ Created 8 Article instances
-  Article 1: Introduction to Issue 173...
-  Article 2: The Crisis of Capitalism...
+Step 3: Saving articles to database
+✓ Saved 8 articles
+Step 4: Processing articles (creating Telegraph pages)
+✓ Created Telegraph pages for 8 articles
+
+==========================================
+VERIFYING: RESULTS
+==========================================
+✓ Review created successfully
+  Review ID: 173
+  Source URL: https://platypus1917.org/category/pr/issue-173/
+  Articles: 8
+  Article 1: Introduction to Issue 173... (ID=1, Date=2025-01-15)
   ...
 
 ==========================================
-STEP 3: CREATING TELEGRAPH ARTICLES
-==========================================
-Creating Telegraph article 1/8: Introduction to Issue 173...
-  ✓ Created 1 Telegraph page(s)
-    Part 1: https://telegra.ph/...
-...
-
-==========================================
-STEP 4: SAVING ARTICLES TO DATABASE
-==========================================
-Saving article 1/8: Introduction to Issue 173...
-  ✓ Saved with ID: 1
-✓ Successfully saved 8 articles to database
-
-==========================================
-STEP 5: CREATING AND SAVING REVIEW
-==========================================
-Created Review instance:
-  ID: 173
-  Source URL: https://platypus1917.org/category/pr/issue-173/
-  Articles: 8
-✓ Saved Review with ID: 173
-
-==========================================
-STEP 6: VERIFYING SAVED DATA
+VERIFYING: DATABASE PERSISTENCE
 ==========================================
 ✓ Successfully retrieved review from database
   Review ID: 173
-  Articles: 8
-  Article 1: ID=1, Title=Introduction to Issue 173...
-  ...
+  Articles in DB: 8
+  Articles with Telegraph URLs: 8/8
 
 ==========================================
 TEST COMPLETED SUCCESSFULLY!
@@ -115,15 +110,23 @@ Summary:
   - Articles processed: 8
   - Telegraph articles created: 8
   - All data verified in database: ✓
+  - Orchestrator workflow: ✓
 ==========================================
 ```
 
 ## What's NOT Tested
 
-- Telegram bot posting (not yet implemented)
-- Channel posting (not yet implemented)
+- Telegram bot posting (uses mock bot handler)
+- Channel posting (not yet fully implemented)
 - Error recovery for partial failures
 - Concurrent processing
+
+## Benefits of This Approach
+
+✅ **Tests Real Workflow** - Uses actual RepostingOrchestrator, not manual steps  
+✅ **Integration Test** - Validates all components work together  
+✅ **Easy to Maintain** - Changes to orchestrator automatically reflected in test  
+✅ **Realistic** - Tests exactly how the bot will process reviews in production
 
 ## Use Cases
 

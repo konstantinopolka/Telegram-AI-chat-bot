@@ -21,7 +21,7 @@ class ArticleRepository(BaseRepository[Article]):
         """Get meaningful identifier for logging."""
         target = existing if existing else obj
         return f"URL={target.original_url}"
-    
+    @override
     async def get_by(self, obj: Article) -> Optional[Article]:
         """
         Get article by natural key (original_url).
@@ -34,7 +34,7 @@ class ArticleRepository(BaseRepository[Article]):
             return None
         
         return await self.get_by(obj.original_url)
-    
+    @override
     async def get_by(self, url: str) -> Optional[Article]:
         """
         Get article by original URL.

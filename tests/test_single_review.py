@@ -1,28 +1,29 @@
 """
-Integration test for processing a single review end-to-end.
+Integration test for processing a single review end-to-end using RepostingOrchestrator.
 
-This test covers the complete workflow:
-1. Scraping a review and its articles
-2. Creating Article instances from scraped data
-3. Creating Telegraph articles
-4. Saving articles to database
-5. Creating and saving a Review with associated articles
+This test covers the complete workflow through the orchestrator:
+1. Orchestrator scrapes review and articles
+2. Orchestrator creates Article instances
+3. Orchestrator saves articles to database
+4. Orchestrator creates Telegraph articles
+5. Orchestrator creates and saves Review with associated articles
 
-Note: Telegram bot posting is not yet implemented, so step 5 (posting) is skipped.
+Uses the actual RepostingOrchestrator to test the real workflow.
 """
 
 import pytest
 import asyncio
 import os
-from typing import List, Dict, Any
+from typing import List
 from datetime import date
+from unittest.mock import MagicMock
 
 # Local imports
 from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
-from src.article_factory import article_factory
-from src.dao.models import Article, Review
-from src.dao.repositories.article_repository import article_repository
+from src.reposting_orchestrator import RepostingOrchestrator
+from src.channel_poster import ChannelPoster
+from src.dao.models import Review
 from src.dao.repositories.review_repository import review_repository
 from src.dao.core.database_manager import db_manager
 from src.logging_config import get_logger
@@ -36,7 +37,7 @@ TEST_REVIEW_URL = "https://platypus1917.org/category/pr/issue-173/"
 
 
 class TestSingleReviewWorkflow:
-    """Integration test for complete single review processing workflow"""
+    """Integration test for complete single review processing workflow using RepostingOrchestrator"""
     
     @pytest.fixture(autouse=True)
     async def setup_and_teardown(self):
@@ -56,15 +57,14 @@ class TestSingleReviewWorkflow:
     @pytest.mark.asyncio
     async def test_complete_review_workflow(self):
         """
-        Test the complete workflow for processing a single review.
+        Test the complete workflow for processing a single review using RepostingOrchestrator.
         
-        Workflow steps:
-        1. Scrape review and articles from TEST_REVIEW_URL
-        2. Create Article instances using ArticleFactory
-        3. Create Telegraph articles for each article
-        4. Save articles to database
-        5. Create Review instance with all articles
-        6. Save Review to database
+        The orchestrator handles:
+        1. Scraping review and articles
+        2. Creating Article instances
+        3. Saving articles to database
+        4. Creating Telegraph articles
+        5. Creating and saving Review
         """
         logger.info("=" * 80)
         logger.info("STARTING COMPLETE REVIEW WORKFLOW TEST")
@@ -72,157 +72,101 @@ class TestSingleReviewWorkflow:
         logger.info("=" * 80)
         
         # ============================================================
-        # STEP 1: Scrape review and articles
+        # SETUP: Initialize orchestrator dependencies
         # ============================================================
         logger.info("\n" + "=" * 60)
-        logger.info("STEP 1: SCRAPING REVIEW AND ARTICLES")
+        logger.info("SETUP: INITIALIZING ORCHESTRATOR")
         logger.info("=" * 60)
         
+        # Create scraper
         scraper = ReviewScraper(TEST_REVIEW_URL)
-        raw_review_data: Dict[str, Any] = scraper.scrape_review_batch()
+        logger.info(f"✓ Created ReviewScraper for: {TEST_REVIEW_URL}")
         
-        assert raw_review_data is not None, "Failed to scrape review data"
-        assert 'articles' in raw_review_data, "No articles in scraped data"
-        assert 'source_url' in raw_review_data, "No source_url in scraped data"
-        assert 'review_id' in raw_review_data, "No review_id in scraped data"
-        
-        articles_count = len(raw_review_data['articles'])
-        logger.info(f"✓ Scraped {articles_count} articles")
-        logger.info(f"✓ Review ID: {raw_review_data['review_id']}")
-        logger.info(f"✓ Source URL: {raw_review_data['source_url']}")
-        
-        assert articles_count > 0, "No articles were scraped"
-        
-        # ============================================================
-        # STEP 2: Create Article instances from scraped data
-        # ============================================================
-        logger.info("\n" + "=" * 60)
-        logger.info("STEP 2: CREATING ARTICLE INSTANCES")
-        logger.info("=" * 60)
-        
-        articles: List[Article] = article_factory.from_scraper_data(raw_review_data)
-        
-        assert articles is not None, "Failed to create articles"
-        assert len(articles) == articles_count, f"Expected {articles_count} articles, got {len(articles)}"
-        
-        logger.info(f"✓ Created {len(articles)} Article instances")
-        for i, article in enumerate(articles, 1):
-            logger.info(f"  Article {i}: {article.title[:50]}...")
-            assert article.title, f"Article {i} has no title"
-            assert article.content, f"Article {i} has no content"
-            assert article.original_url, f"Article {i} has no original_url"
-        
-        # ============================================================
-        # STEP 3: Create Telegraph articles (optional - requires token)
-        # ============================================================
-        logger.info("\n" + "=" * 60)
-        logger.info("STEP 3: CREATING TELEGRAPH ARTICLES")
-        logger.info("=" * 60)
-        
+        # Create Telegraph manager (if token available)
         telegraph_token = os.getenv('TELEGRAPH_ACCESS_TOKEN')
         if telegraph_token and telegraph_token != "test_token":
-            logger.info("Telegraph token found - creating Telegraph articles")
             telegraph_manager = TelegraphManager(access_token=telegraph_token)
-            
-            for i, article in enumerate(articles, 1):
-                try:
-                    logger.info(f"Creating Telegraph article {i}/{len(articles)}: {article.title[:50]}...")
-                    telegraph_urls = await telegraph_manager.create_telegraph_articles(article)
-                    
-                    if telegraph_urls:
-                        article.telegraph_urls = telegraph_urls
-                        logger.info(f"  ✓ Created {len(telegraph_urls)} Telegraph page(s)")
-                        for j, url in enumerate(telegraph_urls, 1):
-                            logger.info(f"    Part {j}: {url}")
-                    else:
-                        logger.warning(f"  ✗ Failed to create Telegraph article for: {article.title[:50]}")
-                except Exception as e:
-                    logger.error(f"  ✗ Error creating Telegraph article: {e}", exc_info=True)
+            logger.info("✓ Created TelegraphManager with access token")
         else:
-            logger.info("⚠ Skipping Telegraph creation - no access token configured")
-            logger.info("  Set TELEGRAPH_ACCESS_TOKEN environment variable to enable")
+            logger.info("⚠ No Telegraph token - using mock TelegraphManager")
+            telegraph_manager = TelegraphManager(access_token="test_token")
         
-        # ============================================================
-        # STEP 4: Save articles to database
-        # ============================================================
-        logger.info("\n" + "=" * 60)
-        logger.info("STEP 4: SAVING ARTICLES TO DATABASE")
-        logger.info("=" * 60)
+        # Create mock bot handler (not needed for this test)
+        bot_handler = MagicMock()
+        logger.info("✓ Created mock bot handler")
         
-        saved_articles: List[Article] = []
-        for i, article in enumerate(articles, 1):
-            try:
-                logger.info(f"Saving article {i}/{len(articles)}: {article.title[:50]}...")
-                saved_article = await article_repository.save(article)
-                saved_articles.append(saved_article)
-                
-                assert saved_article.id is not None, f"Article {i} was not assigned an ID"
-                logger.info(f"  ✓ Saved with ID: {saved_article.id}")
-            except Exception as e:
-                logger.error(f"  ✗ Failed to save article {i}: {e}", exc_info=True)
-                raise
+        # Create mock channel poster (not posting in this test)
+        channel_poster = ChannelPoster(bot_handler, channel_id=-1)
+        logger.info("✓ Created ChannelPoster")
         
-        assert len(saved_articles) == len(articles), "Not all articles were saved"
-        logger.info(f"✓ Successfully saved {len(saved_articles)} articles to database")
-        
-        # ============================================================
-        # STEP 5: Create and save Review
-        # ============================================================
-        logger.info("\n" + "=" * 60)
-        logger.info("STEP 5: CREATING AND SAVING REVIEW")
-        logger.info("=" * 60)
-        
-        review_id = raw_review_data.get('review_id')
-        
-        # Check if review with this ID already exists and delete it for clean test
-        if await review_repository.exists(review_id):
-            logger.info(f"Review with ID {review_id} already exists, deleting for clean test...")
-            await review_repository.delete(review_id)
-            logger.info(f"  ✓ Deleted existing review")
-        
-        review = Review(
-            id=review_id,
-            source_url=raw_review_data['source_url'],
-            articles=saved_articles
+        # Create orchestrator
+        orchestrator = RepostingOrchestrator(
+            review_scraper=scraper,
+            telegraph_manager=telegraph_manager,
+            bot_handler=bot_handler,
+            channel_poster=channel_poster
         )
+        logger.info("✓ Created RepostingOrchestrator")
         
-        logger.info(f"Created Review instance:")
-        logger.info(f"  ID: {review.id}")
+        # ============================================================
+        # EXECUTE: Run the complete workflow through orchestrator
+        # ============================================================
+        logger.info("\n" + "=" * 60)
+        logger.info("EXECUTING: PROCESSING REVIEW BATCH")
+        logger.info("=" * 60)
+        
+        # Process the entire review batch
+        review: Review = await orchestrator.process_review_batch()
+        
+        # ============================================================
+        # VERIFY: Check results
+        # ============================================================
+        logger.info("\n" + "=" * 60)
+        logger.info("VERIFYING: RESULTS")
+        logger.info("=" * 60)
+        
+        # Verify review was created
+        assert review is not None, "Orchestrator returned None - workflow failed"
+        assert review.id is not None, "Review has no ID"
+        assert review.source_url == TEST_REVIEW_URL, "Review URL mismatch"
+        assert review.articles is not None, "Review has no articles"
+        assert len(review.articles) > 0, "Review has no articles"
+        
+        logger.info(f"✓ Review created successfully")
+        logger.info(f"  Review ID: {review.id}")
         logger.info(f"  Source URL: {review.source_url}")
         logger.info(f"  Articles: {len(review.articles)}")
         
-        saved_review = await review_repository.save(review)
-        
-        assert saved_review.id is not None, "Review was not assigned an ID"
-        logger.info(f"✓ Saved Review with ID: {saved_review.id}")
-        
-        # ============================================================
-        # STEP 6: Verify saved data
-        # ============================================================
-        logger.info("\n" + "=" * 60)
-        logger.info("STEP 6: VERIFYING SAVED DATA")
-        logger.info("=" * 60)
-        
-        # Verify review can be retrieved with articles
-        retrieved_review = await review_repository.get_with_articles(saved_review.id)
-        
-        assert retrieved_review is not None, "Failed to retrieve saved review"
-        assert retrieved_review.id == saved_review.id, "Retrieved review ID mismatch"
-        assert retrieved_review.source_url == TEST_REVIEW_URL, "Retrieved review URL mismatch"
-        assert len(retrieved_review.articles) == len(saved_articles), "Article count mismatch"
-        
-        logger.info(f"✓ Successfully retrieved review from database")
-        logger.info(f"  Review ID: {retrieved_review.id}")
-        logger.info(f"  Articles: {len(retrieved_review.articles)}")
-        
-        # Verify individual articles
-        for i, article in enumerate(retrieved_review.articles, 1):
+        # Verify articles
+        for i, article in enumerate(review.articles, 1):
             assert article.id is not None, f"Article {i} has no ID"
             assert article.title, f"Article {i} has no title"
             assert article.content, f"Article {i} has no content"
+            assert article.original_url, f"Article {i} has no original_url"
             assert article.publication_date is not None, f"Article {i} has no publication_date"
             assert isinstance(article.publication_date, date), f"Article {i} publication_date is not a date object"
-            logger.info(f"  Article {i}: ID={article.id}, Title={article.title[:40]}..., Date={article.publication_date}")
+            assert article.review_id == review.id, f"Article {i} review_id mismatch"
+            
+            logger.info(f"  Article {i}: {article.title[:50]}... (ID={article.id}, Date={article.publication_date})")
+        
+        # Verify data persisted in database
+        logger.info("\n" + "=" * 60)
+        logger.info("VERIFYING: DATABASE PERSISTENCE")
+        logger.info("=" * 60)
+        
+        retrieved_review = await review_repository.get_with_articles(review.id)
+        
+        assert retrieved_review is not None, "Failed to retrieve review from database"
+        assert retrieved_review.id == review.id, "Retrieved review ID mismatch"
+        assert len(retrieved_review.articles) == len(review.articles), "Article count mismatch in database"
+        
+        logger.info(f"✓ Successfully retrieved review from database")
+        logger.info(f"  Review ID: {retrieved_review.id}")
+        logger.info(f"  Articles in DB: {len(retrieved_review.articles)}")
+        
+        # Verify Telegraph URLs (if created)
+        telegraph_count = sum(1 for a in review.articles if a.telegraph_urls)
+        logger.info(f"  Articles with Telegraph URLs: {telegraph_count}/{len(review.articles)}")
         
         # ============================================================
         # TEST COMPLETE
@@ -231,10 +175,11 @@ class TestSingleReviewWorkflow:
         logger.info("TEST COMPLETED SUCCESSFULLY!")
         logger.info("=" * 80)
         logger.info("Summary:")
-        logger.info(f"  - Review ID: {saved_review.id}")
-        logger.info(f"  - Articles processed: {len(saved_articles)}")
-        logger.info(f"  - Telegraph articles created: {sum(bool(a.telegraph_urls) for a in saved_articles)}")
+        logger.info(f"  - Review ID: {review.id}")
+        logger.info(f"  - Articles processed: {len(review.articles)}")
+        logger.info(f"  - Telegraph articles created: {telegraph_count}")
         logger.info("  - All data verified in database: ✓")
+        logger.info("  - Orchestrator workflow: ✓")
         logger.info("=" * 80)
 
 
