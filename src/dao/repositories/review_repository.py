@@ -16,8 +16,8 @@ class ReviewRepository(BaseRepository[Review]):
         super().__init__(Review)
         logger.info("ReviewRepository initialized")
     
-    @override
-    async def get_by(self, obj: Review) -> Optional[Review]:
+
+    async def get(self, obj: Review) -> Optional[Review]:
         """
         Get review by natural key (business ID).
         
@@ -28,9 +28,9 @@ class ReviewRepository(BaseRepository[Review]):
             logger.warning("Cannot check natural key for Review without ID")
             return None
         
-        return await self.get_by(obj.id)
+        return await self.get_by_id(obj.id)
     @override
-    async def get_by(self, url: str) -> Optional[Review]:
+    async def get_by_url(self, url: str) -> Optional[Review]:
         """
         Get review by source URL.
         

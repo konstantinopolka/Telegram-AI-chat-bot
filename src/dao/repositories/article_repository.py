@@ -22,7 +22,7 @@ class ArticleRepository(BaseRepository[Article]):
         target = existing if existing else obj
         return f"URL={target.original_url}"
     @override
-    async def get_by(self, obj: Article) -> Optional[Article]:
+    async def get(self, obj: Article) -> Optional[Article]:
         """
         Get article by natural key (original_url).
         
@@ -33,9 +33,9 @@ class ArticleRepository(BaseRepository[Article]):
             logger.warning("Cannot check natural key for Article without original_url")
             return None
         
-        return await self.get_by(obj.original_url)
+        return await self.get_by_url(obj.original_url)
     @override
-    async def get_by(self, url: str) -> Optional[Article]:
+    async def get_by_url(self, url: str) -> Optional[Article]:
         """
         Get article by original URL.
         
@@ -199,7 +199,7 @@ class ArticleRepository(BaseRepository[Article]):
         """
         logger.info(f"Updating Telegraph URLs for article_id {article_id}: {len(telegraph_urls)} URLs")
         try:
-            article = await self.get_by(article_id)
+            article = await self.get_by_id(article_id)
             if article:
                 article.telegraph_urls = telegraph_urls
                 updated_article = await self.update(article)
