@@ -1,13 +1,10 @@
-from typing import Optional, List
+from typing import Optional, List, override
 from sqlmodel import select
 from datetime import datetime, timedelta
-from typing import override
 
 from src.dao.models.article import Article
 from src.dao.repositories.base_repository import BaseRepository
 from src.logging_config import get_logger
-
-from typing import override
 
 logger = get_logger(__name__)
 

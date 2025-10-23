@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, override
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
 
@@ -29,7 +29,7 @@ class ReviewRepository(BaseRepository[Review]):
         
         return await self.get_by(obj.id)
     
-    async def get_by_url(self, url: str) -> Optional[Review]:
+    async def get_by(self, url: str) -> Optional[Review]:
         """
         Get review by source URL.
         
@@ -108,8 +108,11 @@ class ReviewRepository(BaseRepository[Review]):
         except Exception as e:
             logger.error(f"Failed to fetch recent reviews: {e}", exc_info=True)
             raise
-
-
+    @override
+    def _get_identifier_for_logging(self, obj: Review, existing: Review = None) -> str:
+        """Get meaningful identifier for logging."""
+        target = existing if existing else obj
+        return f"Issue ID={target.id}, URL={target.source_url}"
 # Singleton instance
 review_repository = ReviewRepository()
 logger.info("ReviewRepository singleton instance created")
