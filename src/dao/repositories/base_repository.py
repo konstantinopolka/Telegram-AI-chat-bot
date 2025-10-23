@@ -42,7 +42,7 @@ class BaseRepository(ABC, Generic[ModelType]):
         logger.debug(f"Creating new {self.model.__name__} record")
         
         # Check if object already exists by natural key
-        existing = await self.get_by_natural_key(obj)
+        existing = await self.get_by(obj)
         if existing:
             # Get a meaningful identifier for the error message
             identifier = self._get_identifier_for_logging(obj, existing)
@@ -65,7 +65,7 @@ class BaseRepository(ABC, Generic[ModelType]):
     async def update(self, obj: ModelType) -> ModelType:
         """
         Update existing record.
-        
+        The method checks if a record of the instance passed according to its constraints
         Args:
             obj: Model instance with updated values
             
@@ -94,7 +94,7 @@ class BaseRepository(ABC, Generic[ModelType]):
             logger.error(f"Failed to update {self.model.__name__} with ID {obj_id}: {e}", exc_info=True)
             raise
     
-    async def get_by_id(self, id: int) -> Optional[ModelType]:
+    async def get_by(self, id: int) -> Optional[ModelType]:
         """
         Get record by ID.
         Pay attention that id might not suffice to define if two objects in 
@@ -119,7 +119,7 @@ class BaseRepository(ABC, Generic[ModelType]):
             logger.error(f"Failed to fetch {self.model.__name__} by ID {id}: {e}", exc_info=True)
             raise     
     @abstractmethod
-    async def get_by_natural_key(self, obj: ModelType) -> Optional[ModelType]:
+    async def get_by(self, obj: ModelType) -> Optional[ModelType]:
         """
         Get existing record by natural/business key (not database ID).
         
@@ -137,7 +137,7 @@ class BaseRepository(ABC, Generic[ModelType]):
         """
         pass
     
-    async def exists_by_natural_key(self, obj: ModelType) -> bool:
+    async def exists(self, obj: ModelType) -> bool:
         """
         Check if record exists by natural key.
         
@@ -148,12 +148,12 @@ class BaseRepository(ABC, Generic[ModelType]):
             True if exists, False otherwise
         """
         logger.debug(f"Checking if {self.model.__name__} exists by natural key")
-        existing = await self.get_by_natural_key(obj)
+        existing = await self.get_by(obj)
         exists = existing is not None
         logger.debug(f"{self.model.__name__} exists by natural key: {exists}")
         return exists
     
-    async def exists_by_id(self, id: int) -> bool:
+    async def exists(self, id: int) -> bool:
         """
         Check if record exists.
         
@@ -168,7 +168,7 @@ class BaseRepository(ABC, Generic[ModelType]):
             True if exists, False otherwise
         """
         logger.debug(f"Checking if {self.model.__name__} exists with ID: {id}")
-        obj = await self.get_by_id(id)
+        obj = await self.get_by(id)
         exists = obj is not None
         logger.debug(f"{self.model.__name__} with ID {id} exists: {exists}")
         return exists
