@@ -22,7 +22,7 @@ class RepostingOrchestrator:
         self.bot = bot_handler
         self.channel_poster: ChannelPoster = channel_poster
 
-    async def process_review_batch(self) -> Review:
+    async def process_review_batch(self) -> tuple[Review, bool]:
         """
         Full workflow for processing a batch of reviews:
         1. Scrape articles data from review site
@@ -57,11 +57,14 @@ class RepostingOrchestrator:
                 articles=processed_articles
             )
             #4. Save review in database 
-            review = await review_repository.save_if_not_exists(review)
+            review, was_created = await review_repository.save_if_not_exists(review)
+            status = "created" if was_created else "already exists"
+            logger.info(f"Review {review.id} {status}")
+            
             
             
             logger.info(f"Batch processing complete. Processed {len(processed_articles)} articles")
-            return review
+            return review, was_created
             
         except Exception as e:
             logger.error(f"Error in batch processing: {e}", exc_info=True)
@@ -83,9 +86,10 @@ class RepostingOrchestrator:
         saved_articles: List[Article] = []
         for article in articles:
             try:
-                saved_article = await article_repository.save_if_not_exists(article)
+                saved_article, was_created = await article_repository.save_if_not_exists(article)
                 saved_articles.append(saved_article)
-                logger.debug(f"Saved article ID: {saved_article.id}")
+                status = "created" if was_created else "already exists"
+                logger.debug(f"Saved article ID: {saved_article.id} ({status})")
             except Exception as e:
                 logger.error(f"Error saving article '{article.title}': {e}", exc_info=True)
                 continue

@@ -129,23 +129,28 @@ class TestSingleReviewWorkflow:
         assert review is not None, "Orchestrator returned None - workflow failed"
         assert review.id is not None, "Review has no ID"
         assert review.source_url == TEST_REVIEW_URL, "Review URL mismatch"
-        assert review.articles is not None, "Review has no articles"
-        assert len(review.articles) > 0, "Review has no articles"
         
-        logger.info(f"✓ Review created successfully")
+        logger.info("✓ Review created successfully")
         logger.info(f"  Review ID: {review.id}")
         logger.info(f"  Source URL: {review.source_url}")
-        logger.info(f"  Articles: {len(review.articles)}")
+        
+        # Fetch review with articles from database (orchestrator returns detached instance)
+        retrieved_review = await review_repository.get_with_articles(review.id)
+        assert retrieved_review is not None, "Failed to retrieve review from database"
+        assert retrieved_review.articles is not None, "Review has no articles"
+        assert len(retrieved_review.articles) > 0, "Review has no articles"
+        
+        logger.info(f"  Articles: {len(retrieved_review.articles)}")
         
         # Verify articles
-        for i, article in enumerate(review.articles, 1):
+        for i, article in enumerate(retrieved_review.articles, 1):
             assert article.id is not None, f"Article {i} has no ID"
             assert article.title, f"Article {i} has no title"
             assert article.content, f"Article {i} has no content"
             assert article.original_url, f"Article {i} has no original_url"
             assert article.publication_date is not None, f"Article {i} has no publication_date"
             assert isinstance(article.publication_date, date), f"Article {i} publication_date is not a date object"
-            assert article.review_id == review.id, f"Article {i} review_id mismatch"
+            assert article.review_id == retrieved_review.id, f"Article {i} review_id mismatch"
             
             logger.info(f"  Article {i}: {article.title[:50]}... (ID={article.id}, Date={article.publication_date})")
         
@@ -158,15 +163,15 @@ class TestSingleReviewWorkflow:
         
         assert retrieved_review is not None, "Failed to retrieve review from database"
         assert retrieved_review.id == review.id, "Retrieved review ID mismatch"
-        assert len(retrieved_review.articles) == len(review.articles), "Article count mismatch in database"
+        assert len(retrieved_review.articles) > 0, "No articles in database"
         
-        logger.info(f"✓ Successfully retrieved review from database")
+        logger.info("✓ Successfully retrieved review from database")
         logger.info(f"  Review ID: {retrieved_review.id}")
         logger.info(f"  Articles in DB: {len(retrieved_review.articles)}")
         
         # Verify Telegraph URLs (if created)
-        telegraph_count = sum(1 for a in review.articles if a.telegraph_urls)
-        logger.info(f"  Articles with Telegraph URLs: {telegraph_count}/{len(review.articles)}")
+        telegraph_count = sum(1 for a in retrieved_review.articles if a.telegraph_urls)
+        logger.info(f"  Articles with Telegraph URLs: {telegraph_count}/{len(retrieved_review.articles)}")
         
         # ============================================================
         # TEST COMPLETE
@@ -176,7 +181,7 @@ class TestSingleReviewWorkflow:
         logger.info("=" * 80)
         logger.info("Summary:")
         logger.info(f"  - Review ID: {review.id}")
-        logger.info(f"  - Articles processed: {len(review.articles)}")
+        logger.info(f"  - Articles processed: {len(retrieved_review.articles)}")
         logger.info(f"  - Telegraph articles created: {telegraph_count}")
         logger.info("  - All data verified in database: ✓")
         logger.info("  - Orchestrator workflow: ✓")

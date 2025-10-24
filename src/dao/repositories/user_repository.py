@@ -15,8 +15,7 @@ class UserRepository(BaseRepository[User]):
         super().__init__(User)
         logger.info("UserRepository initialized")
         
-    @override
-    async def get_by(self, obj: User) -> Optional[User]:
+    async def get(self, obj: User) -> Optional[User]:
         """
         Get review by natural key (business ID).
         
@@ -168,5 +167,5 @@ class UserRepository(BaseRepository[User]):
 
 
 # Singleton instance
-user_repository = UserRepository()
+user_repository: UserRepository = UserRepository()
 logger.info("UserRepository singleton instance created")
