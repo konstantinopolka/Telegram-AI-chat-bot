@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, override
 from sqlmodel import select
 
 from src.dao.models.user import User
@@ -14,6 +14,20 @@ class UserRepository(BaseRepository[User]):
     def __init__(self):
         super().__init__(User)
         logger.info("UserRepository initialized")
+        
+    @override
+    async def get_by(self, obj: User) -> Optional[User]:
+        """
+        Get review by natural key (business ID).
+        
+        For reviews, the natural key is the review ID itself -
+        it comes from the source (issue number) and defines uniqueness.
+        """
+        if obj.id is None:
+            logger.warning("Cannot check natural key for Review without ID")
+            return None
+        
+        return await self.get_by_telegram_id(obj.id)
     
     async def get_by_telegram_id(self, telegram_id: int) -> Optional[User]:
         """
@@ -87,7 +101,7 @@ class UserRepository(BaseRepository[User]):
             logger.error(f"Failed to fetch admin users: {e}", exc_info=True)
             raise
     
-    async def create_user(
+    async def save_user(
         self,
         telegram_id: int,
         username: str,
@@ -120,7 +134,7 @@ class UserRepository(BaseRepository[User]):
                 phone=phone,
                 is_admin=is_admin
             )
-            created_user = await self.create(user)
+            created_user = await self.save(user)
             logger.info(f"Successfully created user: {username} with ID: {created_user.id}")
             return created_user
         except Exception as e:

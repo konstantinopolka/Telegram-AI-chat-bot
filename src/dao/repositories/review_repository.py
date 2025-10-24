@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, override
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
 
@@ -16,7 +16,21 @@ class ReviewRepository(BaseRepository[Review]):
         super().__init__(Review)
         logger.info("ReviewRepository initialized")
     
-    async def get_by_url(self, url: str) -> Optional[Review]:
+    @override
+    async def get_by(self, obj: Review) -> Optional[Review]:
+        """
+        Get review by natural key (business ID).
+        
+        For reviews, the natural key is the review ID itself -
+        it comes from the source (issue number) and defines uniqueness.
+        """
+        if obj.id is None:
+            logger.warning("Cannot check natural key for Review without ID")
+            return None
+        
+        return await self.get_by(obj.id)
+    @override
+    async def get_by(self, url: str) -> Optional[Review]:
         """
         Get review by source URL.
         
@@ -95,28 +109,11 @@ class ReviewRepository(BaseRepository[Review]):
         except Exception as e:
             logger.error(f"Failed to fetch recent reviews: {e}", exc_info=True)
             raise
-    
-    async def create_review(self, source_url: str) -> Review:
-        """
-        Create a new review.
-        
-        Args:
-            source_url: Review source URL
-            
-        Returns:
-            Created Review instance
-        """
-        logger.info(f"Creating new review from URL: {source_url}")
-        try:
-            review = Review(source_url=source_url)
-            created_review = await self.create(review)
-            logger.info(f"Successfully created review with ID: {created_review.id}")
-            return created_review
-        except Exception as e:
-            logger.error(f"Failed to create review from URL {source_url}: {e}", exc_info=True)
-            raise
-
-
+    @override
+    def _get_identifier_for_logging(self, obj: Review, existing: Review = None) -> str:
+        """Get meaningful identifier for logging."""
+        target = existing if existing else obj
+        return f"Issue ID={target.id}, URL={target.source_url}"
 # Singleton instance
 review_repository = ReviewRepository()
 logger.info("ReviewRepository singleton instance created")

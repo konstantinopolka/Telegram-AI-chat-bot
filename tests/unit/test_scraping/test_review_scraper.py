@@ -149,7 +149,7 @@ class TestReviewScraper:
             'content': '<p>Content</p>',
             'original_url': article_url,
             'authors': ['Author'],
-            'published_date': 'January 2025',
+            'publication_date': 'January 2025',
             'review_id': 173
         }
         
@@ -324,7 +324,7 @@ class TestReviewScraperValidation:
             'content': '<p>This is valid content with sufficient length for validation. It needs to be at least 100 characters long and contain paragraph tags.</p>',
             'original_url': 'https://example.com/article',
             'authors': ['Author Name'],
-            'published_date': 'January 2025'
+            'publication_date': 'January 2025'
         }
         
         result = simple_scraper.validate_content_data(valid_data)

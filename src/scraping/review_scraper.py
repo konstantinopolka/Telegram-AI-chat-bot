@@ -86,6 +86,14 @@ class ReviewScraper(Scraper):
         """
         Scrape a single article by URL.
         Complete workflow: fetch → parse → validate → return article data.
+        
+        Returns:
+            Dict with keys:
+                - title (str): Article title
+                - content (str): Cleaned HTML content
+                - original_url (str): Source URL
+                - authors (List[str]): List of author names
+                - publication_date (str): Publication date
         """
         try:
             logger.info(f"Scraping article: {article_url}")
@@ -161,23 +169,6 @@ class ReviewScraper(Scraper):
         except Exception as e:
             self.handle_scraping_error(e, "review batch scraping")
             return []
-    
-    def preview_content_summary(self) -> Dict[str, Any]:
-        """
-        Get a summary of available content without full scraping.
-        Useful for previewing what will be scraped.
-        """
-        try:
-            article_urls = self.get_listing_urls()
-            return {
-                'base_url': self.base_url,
-                'total_articles': len(article_urls),
-                'article_urls': article_urls[:5],  # First 5 URLs as preview
-                'has_more': len(article_urls) > 5
-            }
-        except Exception as e:
-            self.handle_scraping_error(e, "preview content summary")
-            return {'error': str(e)}
     
     def validate_content_data(self, content_data: Dict[str, Any]) -> bool:
         """

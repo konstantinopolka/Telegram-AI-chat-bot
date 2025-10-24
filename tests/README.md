@@ -69,6 +69,7 @@ ls pytest.ini            # Should exist in project root
 ### 4. Environment Variables
 
 Make sure your environment variables are set (see `docker/database.env` for reference):
+
 - Database configurations
 - Telegraph API credentials
 - Telegram bot tokens (for integration tests)
@@ -99,6 +100,7 @@ pytest -m "system"          # Only system tests
 ### Test Categories
 
 #### 1. Unit Tests
+
 Test individual components in isolation:
 
 ```bash
@@ -117,6 +119,7 @@ pytest tests/unit/test_scraping/test_parser.py::TestParser::test_parse_html -v
 ```
 
 #### 2. Integration Tests
+
 Test component interactions:
 
 ```bash
@@ -134,6 +137,7 @@ pytest tests/integration/scraping/test_review_parser_integration.py -v
 ```
 
 #### 3. System Tests
+
 End-to-end workflow tests:
 
 ```bash
@@ -148,22 +152,41 @@ pytest tests/integration/system/ -v
 pytest tests/integration/system/test_bulk_review_processing.py -v
 ```
 
-### Standalone Tests
+### Standalone Tests]
 
 ```bash
-# Test single article processing
-python tests/test_single_article.py
+chmod +x /home/vagrant/repos/Telegram-AI-chat-bot/tests/run_single_review_test.sh
 
-# Run specific test with custom parameters
-pytest tests/test_single_article.py::test_process_specific_review -v
+# Test single review end-to-end workflow
+./tests/run_single_review_test.sh
+
+# Or run directly with pytest
+pytest tests/test_single_review.py -v -s
+
+# Or run as a standalone Python script
+python tests/test_single_review.py
+
+# To test a different review URL, edit TEST_REVIEW_URL in the test file
+# Current test URL: https://platypus1917.org/category/pr/issue-173/
 ```
+
+**Note**: The single review test covers the complete workflow:
+
+1. Scraping articles from a review page
+2. Creating Article instances
+3. Creating Telegraph articles (if TELEGRAPH_ACCESS_TOKEN is set)
+4. Saving articles to database
+5. Creating and saving Review with all articles
+6. Verifying all data in database
+
+Telegram bot posting is not yet implemented, so that step is skipped.
 
 ## 📊 Test Markers
 
 Tests are organized using pytest markers (defined in `pytest.ini`):
 
 - `@pytest.mark.integration` - Integration tests
-- `@pytest.mark.system` - System-wide tests  
+- `@pytest.mark.system` - System-wide tests
 - `@pytest.mark.slow` - Tests that take longer to run
 
 ### Using Markers
@@ -185,14 +208,18 @@ pytest -m "integration and not slow"
 ## 🔧 Test Configuration
 
 ### pytest.ini
+
 The project uses a `pytest.ini` file with the following configuration:
+
 - Test discovery patterns
 - Async test support
 - Marker definitions
 - Default options (`-v --tb=short --strict-markers`)
 
 ### Async Tests
+
 Tests use `pytest-asyncio` for async support:
+
 ```python
 @pytest.mark.asyncio
 async def test_async_function():
@@ -203,6 +230,7 @@ async def test_async_function():
 ## 📈 Test Output and Reports
 
 ### Generated Files
+
 System tests generate several output files in the project root:
 
 - `platypus_review_links.json` - All review links by year
@@ -224,28 +252,29 @@ pytest --cov=src --cov-report=html
 ## 🧪 Writing New Tests
 
 ### Test File Structure
+
 ```python
 import pytest
 from src.module_to_test import ComponentToTest
 
 class TestComponentName:
     """Test class for ComponentName"""
-    
+
     def setup_method(self):
         """Set up test fixtures for each test method"""
         self.component = ComponentToTest()
-    
+
     def test_basic_functionality(self):
         """Test basic functionality"""
         result = self.component.do_something()
         assert result is not None
-    
+
     @pytest.mark.asyncio
     async def test_async_functionality(self):
         """Test async functionality"""
         result = await self.component.async_method()
         assert result is not None
-    
+
     @pytest.mark.integration
     def test_integration_scenario(self):
         """Integration test with multiple components"""
@@ -253,6 +282,7 @@ class TestComponentName:
 ```
 
 ### Test Naming Conventions
+
 - Test files: `test_*.py`
 - Test classes: `Test*`
 - Test methods: `test_*`
@@ -263,52 +293,58 @@ class TestComponentName:
 ### Common Issues
 
 1. **Import Errors (ModuleNotFoundError: No module named 'src')**
-   
+
    This is the most common issue. You must set PYTHONPATH before running tests:
+
    ```bash
    # From project root directory
    export PYTHONPATH="$(pwd):$PYTHONPATH"
-   
+
    # Then run tests
    pytest tests/unit/ -v
    ```
-   
+
    Alternative approaches:
+
    ```bash
    # Run with PYTHONPATH inline
    PYTHONPATH="$(pwd):$PYTHONPATH" pytest tests/unit/ -v
-   
+
    # Or install the package in development mode
    pip install -e .
    ```
 
 2. **Async Test Failures**
+
    ```bash
    # Use asyncio mode
    pytest --asyncio-mode=auto
    ```
 
 3. **Database Issues**
+
    ```bash
    # Check database setup and migrations
    alembic upgrade head
    ```
 
 4. **Environment Variables**
+
    ```bash
    # Source environment file
    source docker/database.env
    ```
 
 5. **Wrong Directory**
-   
+
    Always run tests from the project root directory (where `pytest.ini` is located):
+
    ```bash
    # Correct - from project root
    cd /path/to/Bot/
    export PYTHONPATH="$(pwd):$PYTHONPATH"
    pytest tests/unit/ -v
-   
+
    # Incorrect - from tests directory
    cd tests/
    pytest unit/ -v  # This will fail with import errors

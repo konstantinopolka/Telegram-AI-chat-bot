@@ -13,7 +13,7 @@ class HandlerRegistry:
     This separates handler registration logic from the main BotHandler class.
     """
     
-    def __init__(self, bot, passed_logger=None):
+    def __init__(self, bot):
         """
         Initialize the registry with bot instance and optional logger
         
@@ -22,7 +22,6 @@ class HandlerRegistry:
             passed_logger: Optional logger instance (deprecated, uses module logger)
         """
         self.bot = bot
-        self.logger = logger  # Use module-level logger
         
         # Create the logged message handler decorator
         self.logged_message_handler = self._create_logged_message_handler()
@@ -56,7 +55,7 @@ class HandlerRegistry:
                         'content_type': message.content_type
                     }
                     
-                    self.logger.info(f"Received update: {json.dumps(update_data, ensure_ascii=False, indent=2)}")
+                    logger.info(f"Received update: {json.dumps(update_data, ensure_ascii=False, indent=2)}")
                     
                     # Call the original handler
                     return await handler_func(message)
@@ -93,20 +92,7 @@ class HandlerRegistry:
                     user = await session.get(User, message.from_user.id)
                     
                     if not user:
-                        logger.info(f"New user detected: {message.from_user.id}")
-                        logger.debug("Creating new user object")
-                        user = User(
-                            telegram_id=message.from_user.id,
-                            username=message.from_user.username,
-                            first_name=message.from_user.first_name,
-                            last_name=message.from_user.last_name,
-                        )
-                        logger.debug("Adding user to session")
-                        session.add(user)
-                        logger.debug("Committing new user to database")
-                        await session.commit()
-                        logger.info(f"New user registered: {user.username or user.first_name} (ID: {user.telegram_id})")
-                        await self.bot.reply_to(message, "Welcome, you have been registered!")
+                       await self.__save_user(message=message, session=session)
                     else:
                         logger.info(f"Returning user: {user.username or user.first_name} (ID: {user.telegram_id})")
                         username = message.from_user.username or message.from_user.first_name or "User"
@@ -118,6 +104,27 @@ class HandlerRegistry:
                     await self.bot.reply_to(message, "Sorry, something went wrong. Please try again.")
                 except Exception as reply_error:
                     logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
+    
+    async def __save_user(self, message, session: AsyncSession):
+        logger.info(f"New user detected: {message.from_user.id}")
+        logger.debug("Creating new user object")
+        
+        # Safely extract phone number if available
+        phone = getattr(message.from_user, 'phone', None) if hasattr(message, 'from_user') else None
+        
+        user = User(
+                telegram_id=message.from_user.id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name,
+                phone=phone
+        )
+        logger.debug("Adding user to session")
+        logger.debug("Committing new user to database")
+        session.add(user)
+        await session.commit()
+        await self.bot.reply_to(message, "Welcome, you have been registered!")
+        logger.info(f"New user registered: {user.username or user.first_name} (ID: {user.telegram_id})")
     
     def _register_rules_handler(self):
         """Register rules command handler"""

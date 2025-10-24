@@ -71,7 +71,7 @@ class TelegraphManager:
         logger.info("Telegraph setup complete")
 
 
-    async def create_article(self, article: Article) -> List[str]:
+    async def create_telegraph_articles(self, article: Article) -> List[str]:
         """
         Create one or more Telegraph articles if the content exceeds limits.
         Returns list of Telegraph URLs.

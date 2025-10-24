@@ -118,7 +118,7 @@ class TestReviewParser:
             mock_content.return_value = "<p>Test content</p>"
             mock_metadata.return_value = {
                 'authors': ['John Doe'],
-                'published_date': 'January 2025',
+                'publication_date': 'January 2025',
                 'review_id': 173
             }
             
@@ -129,7 +129,7 @@ class TestReviewParser:
                 'content': '<p>Test content</p>',
                 'original_url': url,
                 'authors': ['John Doe'],
-                'published_date': 'January 2025',
+                'publication_date': 'January 2025',
                 'review_id': 173
             }
             
@@ -202,7 +202,7 @@ class TestReviewParser:
             
             expected = {
                 'authors': ['Author 1', 'Author 2'],
-                'published_date': 'February 2025'
+                'publication_date': 'February 2025'
             }
             
             assert result == expected

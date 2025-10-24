@@ -12,8 +12,6 @@ from src.dao.repositories.user_repository import user_repository, UserRepository
 from src.dao.repositories.article_repository import article_repository, ArticleRepository
 from src.dao.repositories.review_repository import review_repository, ReviewRepository
 
-from .database_instance import AsyncSessionLocal
-
 __all__ = [
     # Database Manager
     "db_manager",

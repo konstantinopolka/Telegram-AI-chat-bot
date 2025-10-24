@@ -1,4 +1,5 @@
 from typing import List, Dict, Any
+from datetime import date
 from bs4 import BeautifulSoup
 from .parser import Parser
 from .constants import ALLOWED_TAGS, IRRELEVANT_INFO_TAGS
@@ -66,7 +67,7 @@ class ReviewParser(Parser):
         logger.debug(f"Content extracted: {len(content)} characters")
         
         logger.debug("Extracting metadata")
-        metadata = self.extract_metadata(soup)
+        metadata = self.extract_metadata(soup, url)
         logger.debug(f"Metadata extracted: {list(metadata.keys())}")
         
         result = {
@@ -78,13 +79,12 @@ class ReviewParser(Parser):
         logger.info(f"Successfully parsed content page: '{title}' ({len(content)} chars)")
         return result
         
-    def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
+    def extract_metadata(self, soup: BeautifulSoup, url: str) -> Dict[str, Any]:
         """Extract metadata from Platypus article"""
-        metadata = {
+        return {
             'authors': self._extract_authors(soup),
-            'published_date': self._extract_date(soup),
+            'publication_date': self._extract_date(soup, url),
         }
-        return metadata
 
         
     def extract_review_id(self, html: str) -> int:
@@ -199,22 +199,56 @@ class ReviewParser(Parser):
             
         return [a for a in authors if a]
     
-    def _extract_date(self, soup: BeautifulSoup) -> str:
-        """Extract publication date"""
-        # Look for the specific pattern: "| February 2025" or "| July–August 2025"
-        container = soup.select_one('.bpf-content .has-text-align-right')
-        if container:
+    def _extract_date(self, soup: BeautifulSoup, url: str) -> date:
+        """
+        Extract publication date as a date object.
+        
+        Args:
+            soup: BeautifulSoup object of the article page
+            url: Article URL
+            
+        Returns:
+            date object representing publication date
+            
+        Raises:
+            ValueError: If publication date cannot be extracted
+        """
+        import re
+        
+        # Method 1: Extract from URL pattern (e.g., /2025/10/01/)
+        if (url_match := re.search(r'/(\d{4})/(\d{2})/(\d{2})/', url)):
+            year, month, day = map(int, url_match.groups())
+            try:
+                return date(year, month, day)
+            except ValueError as e:
+                logger.warning(f"Invalid date from URL: {year}/{month}/{day}: {e}")
+        
+        # Method 2: Fallback to HTML pattern "| February 2025" or "| July–August 2025"
+        if (container := soup.select_one('.bpf-content .has-text-align-right')):
             text = container.get_text(strip=True)
             # Split on "|" and take the date part
             if "|" in text:
                 date_part = text.split("|")[1].strip()
-                return date_part
+                
+                # Parse month name and year (e.g., "February 2025" or "July–August 2025")
+                # Take first month if range, set day to 1
+                if (month_year_match := re.match(r'(\w+)(?:–\w+)?\s+(\d{4})', date_part)):
+                    month_name, year = month_year_match.groups()
+                    month_map = {
+                        'January': 1, 'February': 2, 'March': 3, 'April': 4,
+                        'May': 5, 'June': 6, 'July': 7, 'August': 8,
+                        'September': 9, 'October': 10, 'November': 11, 'December': 12
+                    }
+                    if (month_num := month_map.get(month_name)):
+                        try:
+                            return date(int(year), month_num, 1)
+                        except ValueError as e:
+                            logger.warning(f"Invalid date from HTML: {year}/{month_num}/1: {e}")
         
-        # Fallback to generic date selectors
-        date_elem = soup.select_one('time, .date, [class*="date"]')
-        if date_elem:
-            return date_elem.get('datetime') or self.clean_text(date_elem.get_text())
-        return ""
+        # Final fallback: raise exception as publication_date is required
+        error_msg = f"Could not extract publication date from URL: {url}"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
     
 
 

@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, override
 from sqlmodel import select
 from datetime import datetime, timedelta
 
@@ -15,8 +15,27 @@ class ArticleRepository(BaseRepository[Article]):
     def __init__(self):
         super().__init__(Article)
         logger.info("ArticleRepository initialized")
-    
-    async def get_by_url(self, url: str) -> Optional[Article]:
+        
+    @override
+    def _get_identifier_for_logging(self, obj: Article, existing: Article = None) -> str:
+        """Get meaningful identifier for logging."""
+        target = existing if existing else obj
+        return f"URL={target.original_url}"
+    @override
+    async def get_by(self, obj: Article) -> Optional[Article]:
+        """
+        Get article by natural key (original_url).
+        
+        For articles, the natural key is the original_url - 
+        same URL = same article in business terms.
+        """
+        if not obj.original_url:
+            logger.warning("Cannot check natural key for Article without original_url")
+            return None
+        
+        return await self.get_by(obj.original_url)
+    @override
+    async def get_by(self, url: str) -> Optional[Article]:
         """
         Get article by original URL.
         
@@ -42,7 +61,7 @@ class ArticleRepository(BaseRepository[Article]):
             logger.error(f"Failed to fetch article by URL {url}: {e}", exc_info=True)
             raise
     
-    async def get_by_review_id(self, review_id: int) -> List[Article]:
+    async def get_all_by_review_id(self, review_id: int) -> List[Article]:
         """
         Get all articles for a review.
         
@@ -90,32 +109,32 @@ class ArticleRepository(BaseRepository[Article]):
             logger.error(f"Failed to fetch recent articles: {e}", exc_info=True)
             raise
     
-    async def search_by_title(self, search_term: str) -> List[Article]:
+    async def get_all_by_title(self, title: str) -> List[Article]:
         """
         Search articles by title.
         
         Args:
-            search_term: Search term (case-insensitive)
+            title: title (case-insensitive)
             
         Returns:
             List of matching articles
         """
-        logger.debug(f"Searching articles by title: '{search_term}'")
+        logger.debug(f"Searching articles by title: '{title}'")
         try:
             async with self.db.get_async_session() as session:
                 result = await session.execute(
                     select(Article).where(
-                        Article.title.ilike(f"%{search_term}%")
+                        Article.title.ilike(f"%{title}%")
                     )
                 )
                 articles = result.scalars().all()
-                logger.debug(f"Found {len(articles)} articles matching '{search_term}'")
+                logger.debug(f"Found {len(articles)} articles matching '{title}'")
                 return articles
         except Exception as e:
-            logger.error(f"Failed to search articles by title '{search_term}': {e}", exc_info=True)
+            logger.error(f"Failed to search articles by title '{title}': {e}", exc_info=True)
             raise
     
-    async def get_by_author(self, author_name: str) -> List[Article]:
+    async def get_all_by_author(self, author_name: str) -> List[Article]:
         """
         Get articles by author name (searches JSON array).
         
@@ -180,7 +199,7 @@ class ArticleRepository(BaseRepository[Article]):
         """
         logger.info(f"Updating Telegraph URLs for article_id {article_id}: {len(telegraph_urls)} URLs")
         try:
-            article = await self.get_by_id(article_id)
+            article = await self.get_by(article_id)
             if article:
                 article.telegraph_urls = telegraph_urls
                 updated_article = await self.update(article)
