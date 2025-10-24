@@ -115,5 +115,5 @@ class ReviewRepository(BaseRepository[Review]):
         target = existing if existing else obj
         return f"Issue ID={target.id}, URL={target.source_url}"
 # Singleton instance
-review_repository = ReviewRepository()
+review_repository: ReviewRepository = ReviewRepository()
 logger.info("ReviewRepository singleton instance created")

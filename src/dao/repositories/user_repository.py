@@ -167,5 +167,5 @@ class UserRepository(BaseRepository[User]):
 
 
 # Singleton instance
-user_repository = UserRepository()
+user_repository: UserRepository = UserRepository()
 logger.info("UserRepository singleton instance created")

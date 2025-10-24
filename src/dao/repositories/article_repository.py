@@ -213,5 +213,5 @@ class ArticleRepository(BaseRepository[Article]):
 
 
 # Singleton instance
-article_repository = ArticleRepository()
+article_repository: ArticleRepository = ArticleRepository()
 logger.info("ArticleRepository singleton instance created")
