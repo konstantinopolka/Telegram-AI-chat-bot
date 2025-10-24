@@ -10,17 +10,14 @@ from src.dao.models import Review, Article
 from src.logging_config import get_logger
 from src.dao import article_repository, review_repository
 from src.article_factory import article_factory
-from src.channel_poster import ChannelPoster
+from src.telegraph_manager import telegraph_manager
 
 logger = get_logger(__name__)
 
 
-class RepostingOrchestrator:
-    def __init__(self, review_scraper: ReviewScraper, telegraph_manager: TelegraphManager, bot_handler, channel_poster):
+class ReviewOrchestrator:
+    def __init__(self, review_scraper: ReviewScraper):
         self.scraper: ReviewScraper  = review_scraper
-        self.telegraph: TelegraphManager = telegraph_manager
-        self.bot = bot_handler
-        self.channel_poster: ChannelPoster = channel_poster
 
     async def process_review_batch(self) -> tuple[Review, bool]:
         """
@@ -119,7 +116,7 @@ class RepostingOrchestrator:
             
             # 2. Create Telegraph article
             logger.info(f"Creating Telegraph article for '{article.title}'")
-            telegraph_urls = await self.telegraph.create_telegraph_articles(article)
+            telegraph_urls = await telegraph_manager.create_telegraph_articles(article)
             
             if telegraph_urls:
                 # 3. Update the article with telegraph URLs

@@ -16,7 +16,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from src.scraping.review_scraper import ReviewScraper
-from src.reposting_orchestrator import RepostingOrchestrator
+from src.reposting_orchestrator import ReviewOrchestrator
 from src.telegraph_manager import TelegraphManager
 from src.scraping.parser import Parser
 
@@ -350,7 +350,7 @@ class TestBulkReviewProcessor:
                 scraper = ReviewScraper(review_url)
                 
                 # Create orchestrator (with None for components we're not testing)
-                orchestrator = RepostingOrchestrator(
+                orchestrator = ReviewOrchestrator(
                     review_scraper=scraper,
                     telegraph_manager=telegraph_manager,
                     db_session=None,  # Skip DB for testing

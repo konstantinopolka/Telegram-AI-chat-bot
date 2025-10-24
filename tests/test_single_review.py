@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 # Local imports
 from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
-from src.reposting_orchestrator import RepostingOrchestrator
+from src.reposting_orchestrator import ReviewOrchestrator
 from src.channel_poster import ChannelPoster
 from src.dao.models import Review
 from src.dao.repositories.review_repository import review_repository
@@ -100,7 +100,7 @@ class TestSingleReviewWorkflow:
         logger.info("✓ Created ChannelPoster")
         
         # Create orchestrator
-        orchestrator = RepostingOrchestrator(
+        orchestrator = ReviewOrchestrator(
             review_scraper=scraper,
             telegraph_manager=telegraph_manager,
             bot_handler=bot_handler,

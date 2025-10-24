@@ -28,7 +28,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from src.scraping.review_scraper import ReviewScraper
-from src.reposting_orchestrator import RepostingOrchestrator  
+from src.reposting_orchestrator import ReviewOrchestrator  
 from src.telegraph_manager import TelegraphManager
 from src.dao.models import Article, Review
 from src.article_factory import article_factory
@@ -122,7 +122,7 @@ class SingleReviewDebugger:
         self.channel_poster = None  # Would be real channel poster in production
         
         # Initialize orchestrator with all components
-        self.orchestrator = RepostingOrchestrator(
+        self.orchestrator = ReviewOrchestrator(
             review_scraper=self.review_scraper,
             telegraph_manager=self.telegraph_manager,
             db_session=self.db_session,
