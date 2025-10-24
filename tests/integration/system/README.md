@@ -16,7 +16,7 @@ python tests/integration/system/test_single_review_debug.py
 ```
 
 **Features:**
-- Full workflow debugging (uses complete RepostingOrchestrator)
+- Full workflow debugging (uses complete ReviewOrchestrator)
 - Step-by-step debugging with detailed breakdowns
 - Saves results to JSON file for analysis
 - Manual code editing required to change URLs/modes
@@ -42,7 +42,7 @@ python tests/integration/system/interactive_review_debug.py
 
 ### Full Workflow Mode
 - Processes the review exactly like production
-- Uses RepostingOrchestrator with real Telegraph API
+- Uses ReviewOrchestrator with real Telegraph API
 - Shows final processing results and timing
 - Best for testing complete functionality
 
@@ -85,7 +85,7 @@ This file contains:
 
 - `test_bulk_review_processing.py` - Main system integration test that:
   - Extracts all review links from Platypus archive
-  - Processes multiple reviews using the RepostingOrchestrator
+  - Processes multiple reviews using the ReviewOrchestrator
   - Tracks statistics and performance metrics
   - Tests Telegraph size limits and constraints
 
@@ -106,7 +106,7 @@ This file contains:
 - Generates detailed reports
 
 ### TestBulkReviewProcessing
-- Uses existing RepostingOrchestrator architecture
+- Uses existing ReviewOrchestrator architecture
 - Processes reviews in batches with proper error handling
 - Generates comprehensive test reports
 - Compatible with pytest framework
@@ -157,7 +157,7 @@ The tests generate several JSON files in the project root:
 
 The tests reuse existing components:
 - `ReviewScraper` for scraping individual reviews
-- `RepostingOrchestrator` for the main processing workflow
+- `ReviewOrchestrator` for the main processing workflow
 - `TelegraphManager` for Telegraph article creation
 - All existing validation and error handling
 
