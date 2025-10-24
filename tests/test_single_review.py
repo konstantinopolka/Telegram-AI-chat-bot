@@ -1,5 +1,5 @@
 """
-Integration test for processing a single review end-to-end using RepostingOrchestrator.
+Integration test for processing a single review end-to-end using ReviewOrchestrator.
 
 This test covers the complete workflow through the orchestrator:
 1. Orchestrator scrapes review and articles
@@ -8,7 +8,7 @@ This test covers the complete workflow through the orchestrator:
 4. Orchestrator creates Telegraph articles
 5. Orchestrator creates and saves Review with associated articles
 
-Uses the actual RepostingOrchestrator to test the real workflow.
+Uses the actual ReviewOrchestrator to test the real workflow.
 """
 
 import pytest
@@ -16,13 +16,11 @@ import asyncio
 import os
 from typing import List
 from datetime import date
-from unittest.mock import MagicMock
 
 # Local imports
 from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
 from src.reposting_orchestrator import ReviewOrchestrator
-from src.channel_poster import ChannelPoster
 from src.dao.models import Review
 from src.dao.repositories.review_repository import review_repository
 from src.dao.core.database_manager import db_manager
@@ -37,7 +35,7 @@ TEST_REVIEW_URL = "https://platypus1917.org/category/pr/issue-173/"
 
 
 class TestSingleReviewWorkflow:
-    """Integration test for complete single review processing workflow using RepostingOrchestrator"""
+    """Integration test for complete single review processing workflow using ReviewOrchestrator"""
     
     @pytest.fixture(autouse=True)
     async def setup_and_teardown(self):
@@ -57,7 +55,7 @@ class TestSingleReviewWorkflow:
     @pytest.mark.asyncio
     async def test_complete_review_workflow(self):
         """
-        Test the complete workflow for processing a single review using RepostingOrchestrator.
+        Test the complete workflow for processing a single review using ReviewOrchestrator.
         
         The orchestrator handles:
         1. Scraping review and articles
@@ -91,22 +89,12 @@ class TestSingleReviewWorkflow:
             logger.info("⚠ No Telegraph token - using mock TelegraphManager")
             telegraph_manager = TelegraphManager(access_token="test_token")
         
-        # Create mock bot handler (not needed for this test)
-        bot_handler = MagicMock()
-        logger.info("✓ Created mock bot handler")
-        
-        # Create mock channel poster (not posting in this test)
-        channel_poster = ChannelPoster(bot_handler, channel_id=-1)
-        logger.info("✓ Created ChannelPoster")
-        
-        # Create orchestrator
+        # Create orchestrator with explicit telegraph_manager for testability
         orchestrator = ReviewOrchestrator(
             review_scraper=scraper,
-            telegraph_manager=telegraph_manager,
-            bot_handler=bot_handler,
-            channel_poster=channel_poster
+            telegraph_manager=telegraph_manager
         )
-        logger.info("✓ Created RepostingOrchestrator")
+        logger.info("✓ Created ReviewOrchestrator")
         
         # ============================================================
         # EXECUTE: Run the complete workflow through orchestrator

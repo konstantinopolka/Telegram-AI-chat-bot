@@ -71,7 +71,7 @@ classDiagram
     %% ========================================
     %% Orchestration Layer
     %% ========================================
-    class RepostingOrchestrator {
+    class ReviewOrchestrator {
         -scraper: ReviewScraper
         -telegraph: TelegraphManager
         -db: AsyncSession
@@ -250,13 +250,13 @@ classDiagram
     HandlerRegistry --> User : saves to DB
 
     %% Orchestration Relationships
-    RepostingOrchestrator --> ReviewScraper : uses
-    RepostingOrchestrator --> TelegraphManager : uses
-    RepostingOrchestrator --> BotHandler : uses
-    RepostingOrchestrator --> ChannelPoster : uses
-    RepostingOrchestrator --> Article : creates
-    RepostingOrchestrator --> Review : creates
-    RepostingOrchestrator --> DatabaseManager : uses session
+    ReviewOrchestrator --> ReviewScraper : uses
+    ReviewOrchestrator --> TelegraphManager : uses
+    ReviewOrchestrator --> BotHandler : uses
+    ReviewOrchestrator --> ChannelPoster : uses
+    ReviewOrchestrator --> Article : creates
+    ReviewOrchestrator --> Review : creates
+    ReviewOrchestrator --> DatabaseManager : uses session
 
     %% Telegraph & Channel
     TelegraphManager --> Telegraph : uses
@@ -298,7 +298,7 @@ classDiagram
 - **ChannelPoster**: Posts articles to Telegram channels
 
 ### Orchestration Layer
-- **RepostingOrchestrator**: Orchestrates the full workflow: scraping → Telegraph → database → posting
+- **ReviewOrchestrator**: Orchestrates the full workflow: scraping → Telegraph → database → posting
 
 ### Scraping Layer
 #### Abstract Base Classes
@@ -322,13 +322,13 @@ classDiagram
 1. **Singleton Pattern**: DatabaseManager ensures single instance
 2. **Abstract Factory**: Scraper, Fetcher, Parser provide abstract interfaces
 3. **Decorator Pattern**: HandlerRegistry wraps handlers with logging
-4. **Orchestrator Pattern**: RepostingOrchestrator coordinates complex workflows
+4. **Orchestrator Pattern**: ReviewOrchestrator coordinates complex workflows
 5. **Repository Pattern**: DatabaseManager abstracts data access
 
 ## Data Flow
 
 1. **Scraping Flow**: ReviewScraper → ReviewFetcher → ReviewParser → Raw Data
-2. **Processing Flow**: RepostingOrchestrator → TelegraphManager → Article with URLs
+2. **Processing Flow**: ReviewOrchestrator → TelegraphManager → Article with URLs
 3. **Storage Flow**: Article/Review → DatabaseManager → Database
 4. **Posting Flow**: ChannelPoster → AsyncTeleBot → Telegram Channel
 5. **User Interaction**: AsyncTeleBot → HandlerRegistry → BotHandler → User saved to DB

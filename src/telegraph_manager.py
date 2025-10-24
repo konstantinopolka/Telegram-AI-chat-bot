@@ -1,4 +1,5 @@
 #standard libraries
+import asyncio
 import json
 import os
 from typing import List, Optional
@@ -20,15 +21,18 @@ class TelegraphManager:
     
     _instance: Optional['TelegraphManager'] = None
     _initialized: bool = False
+    _lock: asyncio.Lock = None
     
     def __new__(cls):
         if cls._instance is None:
             logger.info("Creating new TelegraphManager singleton instance")
             cls._instance = super().__new__(cls)
+            # Initialize lock for the instance
+            cls._lock = asyncio.Lock()
         return cls._instance
     
     def __init__(self, access_token: str = None):
-        # Only initialize once
+        # Only initialize once (thread-safe check happens in async context)
         if self._initialized:
             logger.debug("TelegraphManager already initialized, skipping setup")
             return
@@ -94,6 +98,7 @@ class TelegraphManager:
         logger.warning("Resetting TelegraphManager singleton instance")
         cls._instance = None
         cls._initialized = False
+        cls._lock = None
 
 
     async def create_telegraph_articles(self, article: Article) -> List[str]:
