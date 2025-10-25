@@ -1,7 +1,8 @@
 #standard libraries
+import asyncio
 import json
 import os
-from typing import List
+from typing import List, Optional
 from bs4 import BeautifulSoup
 
 
@@ -18,7 +19,25 @@ logger = get_logger(__name__)
 
 class TelegraphManager:
     
+    _instance: Optional['TelegraphManager'] = None
+    _initialized: bool = False
+    _lock: asyncio.Lock = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            logger.info("Creating new TelegraphManager singleton instance")
+            cls._instance = super().__new__(cls)
+            # Initialize lock for the instance
+            cls._lock = asyncio.Lock()
+        return cls._instance
+    
     def __init__(self, access_token: str = None):
+        # Only initialize once (thread-safe check happens in async context)
+        if self._initialized:
+            logger.debug("TelegraphManager already initialized, skipping setup")
+            return
+        
+        logger.info("Initializing TelegraphManager singleton")
         self.TOKEN_FILE = 'graph_bot.json'  # Keep for backward compatibility
         self.telegraph = None
         # Use provided token or get from environment
@@ -27,6 +46,9 @@ class TelegraphManager:
         self.author_name = os.getenv('TELEGRAPH_AUTHOR_NAME', 'Platypus Review')
         self.author_url = os.getenv('TELEGRAPH_AUTHOR_URL', 'https://platypus1917.org/platypus-review/')
         self.__setup_telegraph()
+        
+        self._initialized = True
+        logger.info("TelegraphManager singleton initialized successfully")
         
         
     def __setup_telegraph(self):
@@ -69,6 +91,14 @@ class TelegraphManager:
             logger.info("Account credentials saved to file")
             
         logger.info("Telegraph setup complete")
+    
+    @classmethod
+    def reset_instance(cls):
+        """Reset the singleton instance (useful for testing)."""
+        logger.warning("Resetting TelegraphManager singleton instance")
+        cls._instance = None
+        cls._initialized = False
+        cls._lock = None
 
 
     async def create_telegraph_articles(self, article: Article) -> List[str]:
@@ -383,4 +413,4 @@ class TelegraphManager:
         return chunks
 
 
-
+telegraph_manager: TelegraphManager = TelegraphManager()

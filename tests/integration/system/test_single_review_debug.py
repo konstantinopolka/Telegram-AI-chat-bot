@@ -28,7 +28,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from src.scraping.review_scraper import ReviewScraper
-from src.reposting_orchestrator import RepostingOrchestrator  
+from src.reposting_orchestrator import ReviewOrchestrator  
 from src.telegraph_manager import TelegraphManager
 from src.dao.models import Article, Review
 from src.article_factory import article_factory
@@ -88,7 +88,7 @@ class SingleReviewDebugResults:
 class SingleReviewDebugger:
     """
     Debug utility for processing a single review with detailed logging and inspection.
-    Uses the existing RepostingOrchestrator workflow for realistic testing.
+    Uses the existing ReviewOrchestrator workflow for realistic testing.
     """
     
     def __init__(self, review_url: str = "https://platypus1917.org/category/pr/issue-178/"):
@@ -121,13 +121,10 @@ class SingleReviewDebugger:
         self.bot_handler = None  # Would be real bot handler in production
         self.channel_poster = None  # Would be real channel poster in production
         
-        # Initialize orchestrator with all components
-        self.orchestrator = RepostingOrchestrator(
+        # Initialize orchestrator with explicit telegraph_manager for testability
+        self.orchestrator = ReviewOrchestrator(
             review_scraper=self.review_scraper,
-            telegraph_manager=self.telegraph_manager,
-            db_session=self.db_session,
-            bot_handler=self.bot_handler,
-            channel_poster=self.channel_poster
+            telegraph_manager=self.telegraph_manager
         )
         
         print("✅ Component setup complete")
@@ -468,7 +465,7 @@ if __name__ == "__main__":
         
         # Choose debugging mode
         print("\n🔧 Select debugging mode:")
-        print("1. Full workflow (uses RepostingOrchestrator)")
+        print("1. Full workflow (uses ReviewOrchestrator)")
         print("2. Step-by-step (detailed debugging)")
         
         # For manual debugging, you can uncomment the mode you want:

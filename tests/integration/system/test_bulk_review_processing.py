@@ -2,7 +2,7 @@
 Integration tests for bulk processing of Platypus Review issues.
 
 This module contains tests for processing multiple review issues from the Platypus archive,
-including extraction of all review links and batch processing using RepostingOrchestrator.
+including extraction of all review links and batch processing using ReviewOrchestrator.
 """
 
 import json
@@ -16,7 +16,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from src.scraping.review_scraper import ReviewScraper
-from src.reposting_orchestrator import RepostingOrchestrator
+from src.reposting_orchestrator import ReviewOrchestrator
 from src.telegraph_manager import TelegraphManager
 from src.scraping.parser import Parser
 
@@ -267,7 +267,7 @@ class BulkProcessingStatistics:
 class TestBulkReviewProcessor:
     """
     Integration tests for bulk review processing.
-    Uses RepostingOrchestrator to process multiple reviews with statistics tracking.
+    Uses ReviewOrchestrator to process multiple reviews with statistics tracking.
     """
     
     def __init__(self):
@@ -304,7 +304,7 @@ class TestBulkReviewProcessor:
     
     async def test_process_recent_reviews(self, max_reviews: int = 5):
         """
-        Test processing a limited number of recent reviews using RepostingOrchestrator.
+        Test processing a limited number of recent reviews using ReviewOrchestrator.
         This is the main integration test that uses existing architecture.
         """
         print(f"Testing processing of {max_reviews} recent reviews...")
@@ -349,13 +349,10 @@ class TestBulkReviewProcessor:
                 # Create scraper for this review
                 scraper = ReviewScraper(review_url)
                 
-                # Create orchestrator (with None for components we're not testing)
-                orchestrator = RepostingOrchestrator(
+                # Create orchestrator with explicit telegraph_manager for testability
+                orchestrator = ReviewOrchestrator(
                     review_scraper=scraper,
-                    telegraph_manager=telegraph_manager,
-                    db_session=None,  # Skip DB for testing
-                    bot_handler=None,  # Skip bot for testing 
-                    channel_poster=None  # Skip channel for testing
+                    telegraph_manager=telegraph_manager
                 )
                 
                 # Process the review using existing architecture

@@ -119,7 +119,6 @@ Telegram-AI-chat-bot/
 The bot follows a layered architecture with clear separation of concerns:
 
 - **Bot Handler Layer**: `BotHandler` and `HandlerRegistry` manage Telegram interactions
-<<<<<<< Updated upstream
 - **Orchestration Layer**: `RepostingOrchestrator` coordinates the complete workflow
 - **Scraping Layer**: Abstract base classes (`Scraper`, `Fetcher`, `Parser`) with concrete implementations for extensibility
 =======
@@ -250,10 +249,10 @@ For detailed Docker setup, versioning system, and deployment to registries, see 
 
 ### 1. Scraping and Publishing Articles
 
-The `RepostingOrchestrator` manages the complete workflow:
+The `ReviewOrchestrator` manages the complete workflow:
 
 ```python
-from src.reposting_orchestrator import RepostingOrchestrator
+from src.reposting_orchestrator import ReviewOrchestrator
 from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
 
@@ -261,16 +260,13 @@ from src.telegraph_manager import TelegraphManager
 scraper = ReviewScraper(base_url="https://example.com/review")
 telegraph = TelegraphManager()
 
-# Process entire review batch
-orchestrator = RepostingOrchestrator(
+# Process entire review batch with explicit telegraph_manager for testability
+orchestrator = ReviewOrchestrator(
     review_scraper=scraper,
-    telegraph_manager=telegraph,
-    db_session=db_session,
-    bot_handler=bot,
-    channel_poster=channel
+    telegraph_manager=telegraph  # Optional: uses singleton if not provided
 )
 
-# Scrape → Telegraph → Database → Channel
+# Scrape → Telegraph → Database
 review = await orchestrator.process_review_batch()
 ```
 
@@ -425,7 +421,6 @@ logging.basicConfig(
 
 ## 🎨 Key Design Patterns
 
-<<<<<<< Updated upstream
 - **Singleton**: `DatabaseManager` ensures single database connection pool
 - **Abstract Factory**: Scraping module (`Scraper`, `Fetcher`, `Parser`) for extensibility
 =======
@@ -433,7 +428,7 @@ logging.basicConfig(
 - **Abstract Factory**: Scraping module (`Scraper`, `Parser`) for extensibility with concrete implementations
 >>>>>>> Stashed changes
 - **Decorator**: `HandlerRegistry` wraps handlers with automatic logging
-- **Orchestrator**: `RepostingOrchestrator` coordinates complex multi-step workflows
+- **Orchestrator**: `ReviewOrchestrator` coordinates complex multi-step workflows
 - **Repository**: `DatabaseManager` abstracts database operations
 
 ## 🔧 Troubleshooting

@@ -2,7 +2,7 @@
 
 ## Overview
 
-`test_single_review.py` is a comprehensive integration test that validates the complete workflow for processing a single review from start to finish **using the RepostingOrchestrator**.
+`test_single_review.py` is a comprehensive integration test that validates the complete workflow for processing a single review from start to finish **using the ReviewOrchestrator**.
 
 ## What It Tests
 
@@ -70,7 +70,7 @@ SETUP: INITIALIZING ORCHESTRATOR
 ✓ Created TelegraphManager with access token
 ✓ Created mock bot handler
 ✓ Created ChannelPoster
-✓ Created RepostingOrchestrator
+✓ Created ReviewOrchestrator
 
 ==========================================
 EXECUTING: PROCESSING REVIEW BATCH
@@ -123,7 +123,7 @@ Summary:
 
 ## Benefits of This Approach
 
-✅ **Tests Real Workflow** - Uses actual RepostingOrchestrator, not manual steps  
+✅ **Tests Real Workflow** - Uses actual ReviewOrchestrator, not manual steps  
 ✅ **Integration Test** - Validates all components work together  
 ✅ **Easy to Maintain** - Changes to orchestrator automatically reflected in test  
 ✅ **Realistic** - Tests exactly how the bot will process reviews in production
