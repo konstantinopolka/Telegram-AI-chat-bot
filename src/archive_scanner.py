@@ -29,8 +29,13 @@ class ArchiveScanner:
         self.archive_url: str = archive_url or os.getenv("ARCHIVE_URL", "")
         self.archive_scraper: ArchiveScraper =  ArchiveScraper(self.archive_url)
         
+    async def get_new_reviews(self) -> Set[str]:
+        reviews_dict: Dict[str, Set[str]] =  self.scan_for_new_reviews()
+        new_reviews: Set[str] = reviews_dict.get("new_reviews")
+        return new_reviews
         
-    async def scan_for_new_reviews(self) -> Dict[str, List[str]]:
+        
+    async def scan_for_new_reviews(self) -> Dict[str, Set[str]]:
         """
         Scan archive and categorize reviews.
         

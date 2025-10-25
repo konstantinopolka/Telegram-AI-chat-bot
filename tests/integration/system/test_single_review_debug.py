@@ -28,7 +28,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from src.scraping.review_scraper import ReviewScraper
-from src.reposting_orchestrator import ReviewOrchestrator  
+from src.review_orchestrator import ReviewOrchestrator  
 from src.telegraph_manager import TelegraphManager
 from src.dao.models import Article, Review
 from src.article_factory import article_factory
