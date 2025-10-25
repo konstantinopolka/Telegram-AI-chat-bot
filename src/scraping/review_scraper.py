@@ -63,7 +63,7 @@ class ReviewScraper(Scraper):
         
         # Fetch and parse content
         logger.debug("Fetching HTML content")
-        html = self.fetcher.fetch_page(article_url)
+        html: str = self.fetcher.fetch_page(article_url)
         logger.debug(f"Received {len(html)} characters of HTML")
         
         logger.debug("Parsing content page")
@@ -80,7 +80,7 @@ class ReviewScraper(Scraper):
             html = self.fetcher.fetch_page()
             
             logger.debug("Parsing review ID from HTML")
-            review_id = self.parser.extract_review_id(html)
+            review_id: int = self.parser.extract_review_id(html)
             logger.info(f"Extracted review ID: {review_id}")
             return review_id
         except Exception as e:
@@ -104,7 +104,7 @@ class ReviewScraper(Scraper):
             logger.info(f"Scraping article: {article_url}")
             
             # 1.2.1 Get page data
-            content_data = self.get_content_data(article_url)
+            content_data: Dict[str, Any] = self.get_content_data(article_url)
             
             # 1.2.2 Validate content
             if content_data and self.validate_content_data(content_data):
@@ -133,12 +133,12 @@ class ReviewScraper(Scraper):
             
             # 1.1 Get the id of a review
             logger.info("Step 1/4: Extracting review ID")
-            review_id = self.get_review_id()
+            review_id: int = self.get_review_id()
             logger.info(f"Review ID: {review_id}")
             
             # 1.2 Get URLs of each article
             logger.info("Step 2/4: Getting article URLs from listing page")
-            article_urls = self.get_listing_urls()
+            article_urls: List[str] = self.get_listing_urls()
             if not article_urls:
                 logger.warning("No article URLs found on listing page")
                 return []
@@ -148,10 +148,10 @@ class ReviewScraper(Scraper):
             
             # 1.3 Scrape each article
             logger.info("Step 3/4: Scraping individual articles")
-            scraped_articles = []
+            scraped_articles: List[Dict[str, Any]] = []
             for idx, url in enumerate(article_urls, 1):
                 logger.info(f"Processing article {idx}/{len(article_urls)}: {url}")
-                article_data = self.scrape_single_article(url)
+                article_data: Dict[str, Any] = self.scrape_single_article(url)
                 if article_data:
                     scraped_articles.append(article_data)
                     logger.debug(f"Article {idx} scraped successfully")

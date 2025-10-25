@@ -15,15 +15,15 @@ class ArchiveScanner:
     Scans review archive and identifies new/existing reviews.
     Workflow:
     1. Get all review URLs from archive (via ArchiveScraper)
-    2. Check which reviews exist in database
     3. Return lists of new vs existing review URLs
     
+    2. Check which reviews exist in database
     """
     
     
     def __init__(self, archive_url: str = "https://platypus1917.org/platypus-review/"):
         """Initialize with archive page URL"""
-        self.archie_url = archive_url
+        self.archie_url: str = archive_url
         
     async def scan_for_new_reviews(self) -> Dict[str, List[str]]:
         """
