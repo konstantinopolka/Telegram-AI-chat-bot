@@ -3,7 +3,7 @@ Concrete scraper for the Review archive page.
 Extracts review URLs from the archive section.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Set
 from src.scraping.fetcher import Fetcher
 
 
@@ -26,7 +26,7 @@ class ArchiveScraper():
         self.parser: ArchiveParser = ArchiveParser()
         """Initialize with archive page URL"""
         
-    def get_listing_urls(self) -> List[str]:
+    def get_listing_urls(self) -> Set[str]:
         """
         Get all review URLs from archive page.
         
@@ -38,6 +38,7 @@ class ArchiveScraper():
         """
         
         archive_html: str = self.fetcher.fetch_page()
-        archive_urls: List[str] = self.parser.parse_archive_page(archive_html)
+        # TO-DO: make a list of urls to a set to make sure there are no duplicates  
+        archive_urls: Set[str] = self.parser.parse_archive_page(archive_html)
         return archive_urls
         
