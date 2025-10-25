@@ -150,7 +150,7 @@ $ python3 -c "from src.dao.repositories.base_repository import BaseRepository; f
 | `src/bot_handler.py`                         | ✅ Complete | ~30 statements     |
 | `src/handler_registry.py`                    | ✅ Complete | ~25 statements     |
 | `src/scraping/review_scraper.py`             | ✅ Complete | ~40 statements     |
-| `src/scraping/review_fetcher.py`             | ✅ Complete | ~15 statements     |
+| `src/scraping/fetcher.py`                    | ✅ Complete | ~15 statements     |
 | `src/scraping/review_parser.py`              | ✅ Complete | ~20 statements     |
 | `src/telegraph_manager.py`                   | ✅ Complete | ~20 statements     |
 | `src/reposting_orchestrator.py`              | ✅ Complete | ~15 statements     |

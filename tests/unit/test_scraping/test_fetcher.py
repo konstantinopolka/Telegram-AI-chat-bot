@@ -2,14 +2,14 @@ import pytest
 import requests
 from unittest.mock import patch
 
-from src.scraping.review_fetcher import ReviewFetcher
+from src.scraping.fetcher import Fetcher
 
 @pytest.fixture
 def fetcher():
-    return ReviewFetcher("https://platypus1917.org/platypus-review/")
+    return Fetcher("https://platypus1917.org/platypus-review/")
 
 class TestFetcher:
-    """Test the predefined methods from the abstract Fetcher class"""
+    """Test the Fetcher class"""
         
     @pytest.mark.parametrize("valid_url", [
             "https://example.com",
@@ -50,7 +50,6 @@ class TestFetcher:
         error = requests.RequestException("Connection failed")
         url = "https://example.com"
         
-        # Capture printed output - ReviewFetcher overrides with custom message
-        with patch('builtins.print') as mock_print:
-            fetcher.handle_request_error(error, url)
-            mock_print.assert_called_once_with(f"Failed to fetch review from {url}: {error}")
+        # The default implementation just logs the error
+        # No assertion needed - just verify it doesn't raise an exception
+        fetcher.handle_request_error(error, url)

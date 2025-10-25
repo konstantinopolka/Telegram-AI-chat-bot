@@ -1,9 +1,8 @@
 from typing import List, Optional, Dict, Any
 from .scraper import Scraper
-from .review_fetcher import ReviewFetcher
+from .fetcher import Fetcher
 from .review_parser import ReviewParser
 from .constants import MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH
-from src.dao.models import Article, Review
 from src.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -17,9 +16,15 @@ class ReviewScraper(Scraper):
     
     def __init__(self, base_url: str):
         logger.info(f"Initializing ReviewScraper for: {base_url}")
+<<<<<<< Updated upstream
         self.base_url = base_url
         self.fetcher = ReviewFetcher(base_url)
         self.parser = ReviewParser(base_url)
+=======
+        self.base_url: str = base_url
+        self.fetcher: Fetcher = Fetcher(base_url)
+        self.parser: ReviewParser = ReviewParser(base_url)
+>>>>>>> Stashed changes
         logger.debug(f"ReviewScraper initialized with fetcher and parser")
         
 
@@ -31,7 +36,7 @@ class ReviewScraper(Scraper):
         logger.info(f"Fetching listing URLs from: {self.base_url}")
         try:
             logger.debug("Fetching HTML from listing page")
-            html = self.fetcher.fetch_page(self.base_url)
+            html = self.fetcher.fetch_page()
             logger.debug(f"Received HTML content: {len(html)} characters")
             
             logger.debug("Parsing listing page for article URLs")
@@ -72,7 +77,7 @@ class ReviewScraper(Scraper):
         logger.info("Extracting review ID from base URL")
         try:
             logger.debug(f"Fetching HTML from: {self.base_url}")
-            html = self.fetcher.fetch_page(self.base_url)
+            html = self.fetcher.fetch_page()
             
             logger.debug("Parsing review ID from HTML")
             review_id = self.parser.extract_review_id(html)

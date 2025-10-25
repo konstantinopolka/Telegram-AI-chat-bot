@@ -11,7 +11,7 @@ tests/
 │   └── test_scraping/              # Scraping module unit tests
 │       ├── test_fetcher.py
 │       ├── test_parser.py
-│       ├── test_review_fetcher.py
+│       ├── test_review_fetcher.py  # Detailed Fetcher tests
 │       ├── test_review_parser.py
 │       └── test_review_scraper.py
 ├── integration/                    # Integration tests for component interactions
