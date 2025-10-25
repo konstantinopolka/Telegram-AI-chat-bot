@@ -6,8 +6,11 @@ Does NOT handle scraping details (delegates to ArchiveScraper).
 
 from typing import Dict, List, Optional
 from src.dao import review_repository
+from src.scraping.archive_scraper import ArchiveScraper
 
-
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 class ArchiveScanner:
     
@@ -21,9 +24,10 @@ class ArchiveScanner:
     """
     
     
-    def __init__(self, archive_url: str = "https://platypus1917.org/platypus-review/"):
+    def __init__(self, archive_url: str | None = None):
         """Initialize with archive page URL"""
-        self.archie_url: str = archive_url
+        self.archive_url: str = archive_url or os.getenv("ARCHIVE_URL", "")
+        
         
     async def scan_for_new_reviews(self) -> Dict[str, List[str]]:
         """

@@ -4,7 +4,7 @@ import json
 import os
 from typing import List, Optional
 from bs4 import BeautifulSoup
-
+from dotenv import load_dotenv
 
 #third party libraries
 from telegraph import Telegraph
@@ -16,6 +16,8 @@ from src.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
+load_dotenv()
 
 class TelegraphManager:
     

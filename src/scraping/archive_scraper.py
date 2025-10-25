@@ -4,10 +4,15 @@ Extracts review URLs from the archive section.
 """
 
 from typing import Dict, List, Optional, Any
+from src.scraping.fetcher import Fetcher
 
-from .scraper import Scraper
 
-class ArchiveScraper(Scraper):
+from src.scraping.fetcher import Fetcher
+from src.scraping.archive_parser import ArchiveParser
+
+
+
+class ArchiveScraper():
     """
     Scraper for archive page - extracts review URLs only.
     
@@ -15,8 +20,10 @@ class ArchiveScraper(Scraper):
     It only extracts review listing URLs from the archive page.
     """
     
-    def __init__(self, archive_url: str):
-        self.archive_url: str = archive_url
+    def __init__(self, archive_url: str) :
+        self.archive_url = archive_url
+        self.fetcher: Fetcher = Fetcher(archive_url)
+        self.parser: ArchiveParser = ArchiveParser()
         """Initialize with archive page URL"""
         
     def get_listing_urls(self) -> List[str]:
@@ -29,15 +36,8 @@ class ArchiveScraper(Scraper):
         3. Extract review URLs
         4. Return list of review URLs
         """
-        pass
         
-    def scrape_single_article(self, url: str) -> Optional[Dict[str, Any]]:
-        """Not used for archive - raises NotImplementedError"""
-        raise NotImplementedError("Archive scraper only extracts URLs")
+        archive_html: str = self.fetcher.fetch_page()
+        archive_urls: List[str] = self.parser.parse_archive_page(archive_html)
+        return archive_urls
         
-    def scrape_review_batch(self) -> List[str]:
-        """
-        Main method: get all review URLs from archive.
-        Returns list of review URLs (not full review data).
-        """
-        pass
