@@ -349,7 +349,7 @@ async def send_welcome(message):
 
 ### Using in Orchestrator
 
-Example from `RepostingOrchestrator`:
+Example from `ReviewOrchestrator`:
 
 ```python
 async def process_single_article(self, article: Article) -> Article:
