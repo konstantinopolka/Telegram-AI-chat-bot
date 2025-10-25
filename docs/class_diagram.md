@@ -97,9 +97,11 @@ classDiagram
     }
 
     class Fetcher {
-        <<abstract>>
-        +fetch_page(url: str)* str
-        +fetch_multiple_pages(urls: List[str])* Dict~str, str~
+        -base_url: str
+        -session: Session
+        +__init__(base_url: str)
+        +fetch_page(url: str) str
+        +fetch_multiple_pages(urls: List[str]) Dict~str, str~
         +validate_url(url: str) bool
         +handle_request_error(error: Exception, url: str)
     }
@@ -122,7 +124,7 @@ classDiagram
     %% ========================================
     class ReviewScraper {
         -base_url: str
-        -fetcher: ReviewFetcher
+        -fetcher: Fetcher
         -parser: ReviewParser
         +__init__(base_url: str)
         +get_listing_urls() List~str~
@@ -132,12 +134,13 @@ classDiagram
         +scrape_review_batch() Dict
     }
 
-    class ReviewFetcher {
+    class Fetcher {
         -base_url: str
         -session: Session
         +__init__(base_url: str)
         +fetch_page(url: str) str
         +fetch_multiple_pages(urls: List[str]) Dict~str, str~
+        +validate_url(url: str) bool
         +handle_request_error(error: Exception, url: str)
     }
 
@@ -239,7 +242,7 @@ classDiagram
     %% ========================================
     %% Relationships
     %% ========================================
-    
+
     %% Main Entry Point
     Main --> BotHandler : creates
 
@@ -265,13 +268,12 @@ classDiagram
 
     %% Scraping Hierarchy
     Scraper <|-- ReviewScraper : implements
-    Fetcher <|-- ReviewFetcher : implements
     Parser <|-- ReviewParser : implements
-    
-    ReviewScraper --> ReviewFetcher : uses
+
+    ReviewScraper --> Fetcher : uses
     ReviewScraper --> ReviewParser : uses
     ReviewParser --> BeautifulSoup : uses
-    ReviewFetcher --> BeautifulSoup : returns HTML for
+    Fetcher --> BeautifulSoup : returns HTML for
 
     %% Database Relationships
     DatabaseManager --> User : manages
@@ -287,13 +289,16 @@ classDiagram
 ## Component Descriptions
 
 ### Main Entry Point
+
 - **Main**: Application entry point that initializes and starts the bot
 
 ### Bot Handler Layer
+
 - **BotHandler**: Main bot controller, manages bot lifecycle and handlers
 - **HandlerRegistry**: Registers and manages message handlers with logging
 
 ### Telegraph & Channel Management
+
 - **TelegraphManager**: Creates and manages Telegraph articles, handles content splitting
 - **ChannelPoster**: Posts articles to Telegram channels
 
@@ -301,17 +306,20 @@ classDiagram
 - **ReviewOrchestrator**: Orchestrates the full workflow: scraping → Telegraph → database → posting
 
 ### Scraping Layer
+
 #### Abstract Base Classes
+
 - **Scraper**: Abstract base for scraping workflows
-- **Fetcher**: Abstract base for HTTP fetching
 - **Parser**: Abstract base for HTML parsing
 
 #### Concrete Implementations
+
 - **ReviewScraper**: Scrapes review articles from websites
-- **ReviewFetcher**: Fetches HTML content via HTTP
+- **Fetcher**: Fetches HTML content via HTTP
 - **ReviewParser**: Parses HTML to extract structured data
 
 ### Database Layer
+
 - **DatabaseManager**: Singleton managing database connections and sessions
 - **User**: User data model
 - **Article**: Article data model with Telegraph URLs
@@ -320,13 +328,14 @@ classDiagram
 ## Key Design Patterns
 
 1. **Singleton Pattern**: DatabaseManager ensures single instance
-2. **Abstract Factory**: Scraper, Fetcher, Parser provide abstract interfaces
+2. **Abstract Factory**: Scraper and Parser provide abstract interfaces
 3. **Decorator Pattern**: HandlerRegistry wraps handlers with logging
 4. **Orchestrator Pattern**: ReviewOrchestrator coordinates complex workflows
 5. **Repository Pattern**: DatabaseManager abstracts data access
 
 ## Data Flow
 
+<<<<<<< Updated upstream
 1. **Scraping Flow**: ReviewScraper → ReviewFetcher → ReviewParser → Raw Data
 2. **Processing Flow**: ReviewOrchestrator → TelegraphManager → Article with URLs
 3. **Storage Flow**: Article/Review → DatabaseManager → Database

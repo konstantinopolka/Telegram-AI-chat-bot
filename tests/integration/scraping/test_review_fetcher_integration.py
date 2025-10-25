@@ -1,14 +1,14 @@
 import pytest
 import requests
 
-from src.scraping.review_fetcher import ReviewFetcher
+from src.scraping.fetcher import Fetcher
 
-class TestReviewFetcherIntegration:
-    """Integration tests for ReviewFetcher (these require network access)"""
+class TestFetcherIntegration:
+    """Integration tests for Fetcher (these require network access)"""
     
     def setup_method(self):
         """Set up test fixtures"""
-        self.fetcher = ReviewFetcher("https://httpbin.org")  # Using httpbin for reliable testing
+        self.fetcher = Fetcher("https://httpbin.org")  # Using httpbin for reliable testing
     
     @pytest.mark.integration
     def test_fetch_page_real_request(self):
