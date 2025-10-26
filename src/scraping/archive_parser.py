@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Set
+from bs4 import BeautifulSoup
 
 class ArchiveParser():
     """
@@ -20,6 +21,13 @@ class ArchiveParser():
            {url1, url2, .....}
            
         """
+        soup: BeautifulSoup = BeautifulSoup(html, 'html.parser')
+        
+        selectors = [ 
+            'dc-four dc-columns h2 > a[href^=https://platypus1917.org/category/pr/issue-]',
+                
+        ]
+        
         
         # TO-DO: parse the archive website
         pass

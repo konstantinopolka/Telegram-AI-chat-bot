@@ -16,15 +16,9 @@ class ReviewScraper(Scraper):
     
     def __init__(self, base_url: str):
         logger.info(f"Initializing ReviewScraper for: {base_url}")
-<<<<<<< Updated upstream
-        self.base_url = base_url
-        self.fetcher = ReviewFetcher(base_url)
-        self.parser = ReviewParser(base_url)
-=======
         self.base_url: str = base_url
         self.fetcher: Fetcher = Fetcher(base_url)
         self.parser: ReviewParser = ReviewParser(base_url)
->>>>>>> Stashed changes
         logger.debug(f"ReviewScraper initialized with fetcher and parser")
         
 
