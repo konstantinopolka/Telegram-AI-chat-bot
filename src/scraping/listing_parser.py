@@ -36,3 +36,6 @@ class ListingParser(Parser):
         if href:
             return self.normalize_url(href, self.base_url)
         return None
+    
+    
+    

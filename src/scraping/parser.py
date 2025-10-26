@@ -3,8 +3,7 @@ from typing import List, Optional, Dict, Any
 from bs4 import BeautifulSoup
 
 class Parser(ABC):
-    
-
+    """Base parser contract - minimal required interface"""
     
     # Optional: methods that might have default implementations
     def create_soup(self, html: str) -> BeautifulSoup:

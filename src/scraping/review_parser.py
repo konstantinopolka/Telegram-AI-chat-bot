@@ -1,7 +1,9 @@
 from typing import List, Dict, Any
 from datetime import date
 from bs4 import BeautifulSoup
-from .parser import Parser
+from src.scraping.listing_parser import ListingParser
+from src.scraping.content_parser import ContentParser
+
 from .constants import ALLOWED_TAGS, IRRELEVANT_INFO_TAGS
 from src.logging_config import get_logger
 import requests
@@ -9,46 +11,20 @@ import requests
 logger = get_logger(__name__)
 
 
-class ReviewParser(Parser):
-    def __init__(self, base_url: str):
+class ReviewParser(ListingParser, ContentParser):
+    def __init__(self, base_url: str, article_selectors: List[str] = None):
         logger.info(f"Initializing ReviewParser for: {base_url}")
-        self.base_url = base_url
-        logger.debug("ReviewParser initialized")
         
-    def parse_listing_page(self, html: str) -> List[str]:
-        """Parse review page HTML to extract article URLs"""
-        logger.debug(f"Parsing listing page HTML ({len(html)} chars)")
-        soup = self.create_soup(html)
-        logger.debug("BeautifulSoup object created")
-     
-
-        # Multiple selectors for both relative and absolute URLs
-        selectors = [
-            'h4 > a[href^="/20"]',                           # Relative URLs: /2025/01/article
-            'h4 > a[href^="https://platypus1917.org/20"]'    # Absolute URLs
+        # Default selectors for article links
+        default_selectors = [
+            'h4 > a[href^="/20"]',
+            'h4 > a[href^="https://platypus1917.org/20"]'
         ]
         
-        logger.debug(f"Searching for article links using {len(selectors)} CSS selectors")
-        article_urls = []
-        for selector in selectors:
-            links = soup.select(selector)
-            logger.debug(f"Selector '{selector}' found {len(links)} links")
-            extracted = [url for link in links if (url := self.extract_link(link))]
-            article_urls.extend(extracted)
-            logger.debug(f"Extracted {len(extracted)} valid URLs from this selector")
+        selectors = article_selectors or default_selectors
+        ListingParser.__init__(self, base_url=base_url, link_selectors=selectors)
+        logger.debug("ReviewParser initialized")
         
-        # Remove duplicates while preserving order
-        unique_urls = list(dict.fromkeys(article_urls))
-        logger.info(f"Parsed {len(unique_urls)} unique article URLs from listing page")
-        logger.debug(f"Article URLs: {unique_urls}")
-        return unique_urls
-    
-    def extract_link(self, link):
-        href = link.get('href')
-        if href:
-            url = self.normalize_url(href, self.base_url)
-            return url
-        return None
     
     def parse_content_page(self, html: str, url: str) -> Dict[str, Any]:
         """Parse single article HTML to extract structured data"""
