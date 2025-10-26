@@ -1,7 +1,11 @@
 from typing import Dict, List, Optional, Any, Set
 from bs4 import BeautifulSoup
 
-class ArchiveParser():
+from src.scraping.listing_parser import ListingParser
+from src.logging_config import get_logger
+logger = get_logger(__name__)
+
+class ArchiveParser(ListingParser):
     """
     Parses archive page to extract review URLs.
     
@@ -13,7 +17,7 @@ class ArchiveParser():
     </div>
     """
     
-    def parse_archive_page(self, html: str) -> List[str]:
+    def parse_archive_page(self, archive_url: str, selectors: List[str] = None) -> List[str]:
         """
         Extract review urls from archive.
         
@@ -21,13 +25,21 @@ class ArchiveParser():
            {url1, url2, .....}
            
         """
-        soup: BeautifulSoup = BeautifulSoup(html, 'html.parser')
         
-        selectors = [ 
-            'dc-four dc-columns h2 > a[href^=https://platypus1917.org/category/pr/issue-]',
-                
+        default_selectors = [ 
+            'h2 > a[href^=https://platypus1917.org/category/pr/issue-]',
         ]
         
+        selectors = selectors or default_selectors
+        super().__init__(base_url=archive_url, link_selectors=selectors)
+        logger.info(f"ArchiveParser initialized with {len(selectors)} selectors")
         
-        # TO-DO: parse the archive website
-        pass
+    def parse_archive_page(self, html: str) -> List[str]:
+        """
+        Extract review URLs from archive.
+        Delegates to inherited parse_listing_page.
+        """
+        logger.debug("Parsing archive page")
+        urls = self.parse_listing_page(html)
+        logger.info(f"Found {len(urls)} review URLs in archive")
+        return urls
