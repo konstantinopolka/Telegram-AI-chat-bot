@@ -6,4 +6,4 @@ has been integrated into the proper test structure.
 """
 
 # Import from the new location for backwards compatibility  
-from .test_bulk_review_processing import test_extract_review_links, test_process_reviews
+from tests.integration.system.test_bulk_review_processing import test_extract_review_links, test_process_reviews

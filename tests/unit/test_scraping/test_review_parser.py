@@ -149,11 +149,11 @@ class TestReviewParser:
         assert result == expected_title
         
     def test_extract_content_with_wrapper(self, review_parser):
-        """Test content extraction with dc-page-seo-wrapper"""
+        """Test content extraction with bpf-content wrapper"""
         html = """
         <html>
             <body>
-                <div class="dc-page-seo-wrapper">
+                <div class="bpf-content">
                     <p>Main content here</p>
                     <div>More content</div>
                 </div>
@@ -167,10 +167,10 @@ class TestReviewParser:
             mock_clean.return_value = "cleaned content"
             result = review_parser.extract_content(soup)
             
-            # Should pass the dc-page-seo-wrapper div to cleaning
+            # Should pass the bpf-content div to cleaning
             mock_clean.assert_called_once()
             args = mock_clean.call_args[0]
-            assert args[0].get('class') == ['dc-page-seo-wrapper']
+            assert args[0].get('class') == ['bpf-content']
             assert result == "cleaned content"
     
     def test_extract_content_fallback_to_full_soup(self, review_parser):
@@ -191,23 +191,25 @@ class TestReviewParser:
     def test_extract_metadata_success(self, review_parser):
         """Test successful metadata extraction"""
         soup = Mock()
+        url = "https://platypus1917.org/2025/01/01/test-article"
         
         with patch.object(review_parser, '_extract_authors') as mock_authors, \
              patch.object(review_parser, '_extract_date') as mock_date:
             
             mock_authors.return_value = ['Author 1', 'Author 2']
-            mock_date.return_value = 'February 2025'
+            from datetime import date
+            mock_date.return_value = date(2025, 2, 1)
             
-            result = review_parser.extract_metadata(soup)
+            result = review_parser.extract_metadata(soup, url)
             
             expected = {
                 'authors': ['Author 1', 'Author 2'],
-                'publication_date': 'February 2025'
+                'publication_date': date(2025, 2, 1)
             }
             
             assert result == expected
             mock_authors.assert_called_once_with(soup)
-            mock_date.assert_called_once_with(soup)
+            mock_date.assert_called_once_with(soup, url)
 
     @pytest.mark.parametrize(
         "title_html, expected_title",
@@ -498,71 +500,73 @@ class TestReviewParserExtractDate:
         </div>
         """
         soup = BeautifulSoup(html, 'html.parser')
+        url = "https://example.com/article"
         
-        result = simple_parser._extract_date(soup)
-        assert result == "February 2025"
+        from datetime import date
+        result = simple_parser._extract_date(soup, url)
+        assert result == date(2025, 2, 1)
     
     def test_extract_date_multiple_months(self, simple_parser):
-        """Test date extraction for multiple months"""
+        """Test date extraction for multiple months (uses first month)"""
         html = """
         <div class="bpf-content">
             <p class="has-text-align-right">Platypus Review 178 | July–August 2025</p>
         </div>
         """
         soup = BeautifulSoup(html, 'html.parser')
+        url = "https://example.com/article"
         
-        result = simple_parser._extract_date(soup)
-        assert result == "July–August 2025"
+        from datetime import date
+        result = simple_parser._extract_date(soup, url)
+        assert result == date(2025, 7, 1)
     
     def test_extract_date_no_pipe_separator(self, simple_parser):
-        """Test date extraction when no pipe separator exists"""
+        """Test date extraction when no pipe separator exists - should raise ValueError"""
         html = """
         <div class="bpf-content">
             <p class="has-text-align-right">Platypus Review 173 February 2025</p>
         </div>
         """
         soup = BeautifulSoup(html, 'html.parser')
+        url = "https://example.com/article"
         
-        result = simple_parser._extract_date(soup)
-        assert result == ""  # Should fallback to empty string
+        # Should raise ValueError when date cannot be extracted
+        with pytest.raises(ValueError):
+            simple_parser._extract_date(soup, url)
     
-    def test_extract_date_fallback_to_time_element(self, simple_parser):
-        """Test date extraction fallback to time element"""
+    def test_extract_date_from_url(self, simple_parser):
+        """Test date extraction from URL pattern"""
+        html = "<html><body><p>No date in HTML</p></body></html>"
+        soup = BeautifulSoup(html, 'html.parser')
+        url = "https://example.com/2025/02/15/article"
+        
+        from datetime import date
+        result = simple_parser._extract_date(soup, url)
+        assert result == date(2025, 2, 15)
+    
+    def test_extract_date_fallback_to_html_when_url_invalid(self, simple_parser):
+        """Test fallback to HTML when URL has invalid date"""
         html = """
-        <html>
-            <body>
-                <time datetime="2025-02-01">February 1, 2025</time>
-            </body>
-        </html>
+        <div class="bpf-content">
+            <p class="has-text-align-right">Platypus Review 173 | March 2025</p>
+        </div>
         """
         soup = BeautifulSoup(html, 'html.parser')
+        url = "https://example.com/2025/13/35/article"  # Invalid month and day
         
-        result = simple_parser._extract_date(soup)
-        assert result == "2025-02-01"
-    
-    def test_extract_date_fallback_to_date_class(self, simple_parser):
-        """Test date extraction fallback to date class"""
-        html = """
-        <html>
-            <body>
-                <span class="date">March 2025</span>
-            </body>
-        </html>
-        """
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        with patch.object(simple_parser, 'clean_text') as mock_clean:
-            mock_clean.return_value = "March 2025"
-            result = simple_parser._extract_date(soup)
-            assert result == "March 2025"
+        from datetime import date
+        result = simple_parser._extract_date(soup, url)
+        assert result == date(2025, 3, 1)
     
     def test_extract_date_no_date_found(self, simple_parser):
-        """Test date extraction when no date is found"""
+        """Test date extraction when no date is found - should raise ValueError"""
         html = "<html><body><p>No date here</p></body></html>"
         soup = BeautifulSoup(html, 'html.parser')
+        url = "https://example.com/article"
         
-        result = simple_parser._extract_date(soup)
-        assert result == ""
+        # Should raise ValueError when date cannot be extracted
+        with pytest.raises(ValueError):
+            simple_parser._extract_date(soup, url)
 
 
 class TestReviewParserExtractReviewId:
@@ -717,13 +721,15 @@ class TestReviewParserAbstractMethodImplementation:
         assert isinstance(result, str)
         
         # extract_metadata should return dict
+        url = "https://example.com/2025/01/01/article"
         with patch.object(simple_parser, '_extract_authors') as mock_authors, \
              patch.object(simple_parser, '_extract_date') as mock_date:
             
+            from datetime import date
             mock_authors.return_value = []
-            mock_date.return_value = ""
+            mock_date.return_value = date(2025, 1, 1)
             
-            result = simple_parser.extract_metadata(soup)
+            result = simple_parser.extract_metadata(soup, url)
             assert isinstance(result, dict)
         
         # clean_content_for_publishing should return string
