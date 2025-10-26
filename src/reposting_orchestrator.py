@@ -22,7 +22,8 @@ class RepostingOrchestrator:
         new_reviews_urls:  Set[str] = await self.archive_scanner.get_new_reviews()
         for review_url in new_reviews_urls:
             review_orchestrator: ReviewOrchestrator = ReviewOrchestrator(review_url)
-            review, was_created: Tuple[Review, bool] = await review_orchestrator.process_review_batch()
+            result: Tuple[Review, bool] = await review_orchestrator.process_review_batch()
+            review, was_created = result
             if was_created:
                 # TO-DO: Handle reposting in telegram
                 pass

@@ -36,7 +36,7 @@ class ArchiveScanner:
         
     async def get_new_reviews(self) -> Set[str]:
         logger.info("Getting new review URLs")
-        reviews_dict: Dict[str, Set[str]] =  self.scan_for_new_reviews()
+        reviews_dict: Dict[str, Set[str]] = await self.scan_for_new_reviews()
         new_reviews: Set[str] = reviews_dict.get("new_reviews")
         logger.info(f"Found {len(new_reviews)} new review(s)")
         return new_reviews

@@ -17,17 +17,16 @@ class ArchiveParser(ListingParser):
     </div>
     """
     
-    def parse_archive_page(self, archive_url: str, selectors: List[str] = None) -> List[str]:
+    def __init__(self, archive_url: str = "https://platypus1917.org/platypus-review/", selectors: List[str] = None):
         """
-        Extract review urls from archive.
+        Initialize ArchiveParser with archive URL and selectors.
         
-        Returns:
-           {url1, url2, .....}
-           
+        Args:
+            archive_url: URL of the archive page
+            selectors: CSS selectors for finding review links (optional)
         """
-        
         default_selectors = [ 
-            'h2 > a[href^=https://platypus1917.org/category/pr/issue-]',
+            'h2 > a[href^="https://platypus1917.org/category/pr/issue-"]',
         ]
         
         selectors = selectors or default_selectors

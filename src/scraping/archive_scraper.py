@@ -32,7 +32,7 @@ class ArchiveScraper():
         selectors = [s.strip() for s in selectors_str.split(',') if s.strip()]
         
         
-        self.parser: ArchiveParser = ArchiveParser()
+        self.parser: ArchiveParser = ArchiveParser(archive_url, selectors if selectors else None)
         """Initialize with archive page URL"""
         
     def get_listing_urls(self) -> Set[str]:
