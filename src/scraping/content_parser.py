@@ -24,7 +24,7 @@ class ContentParser(Parser):
         pass
     
     @abstractmethod
-    def extract_metadata(self, soup: BeautifulSoup) -> Dict[str, Any]:
+    def extract_metadata(self, soup: BeautifulSoup, url: str) -> Dict[str, Any]:
         """Extract metadata (authors, dates, etc.) from parsed HTML"""
         pass
     

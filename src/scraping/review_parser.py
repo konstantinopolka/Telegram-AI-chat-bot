@@ -20,8 +20,9 @@ class ReviewParser(ListingParser, ContentParser):
             'h4 > a[href^="/20"]',
             'h4 > a[href^="https://platypus1917.org/20"]'
         ]
-        
-        selectors = article_selectors or default_selectors
+        selectors = article_selectors
+        if article_selectors is None:
+            selectors = default_selectors
         ListingParser.__init__(self, base_url=base_url, link_selectors=selectors)
         logger.debug("ReviewParser initialized")
         
