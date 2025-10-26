@@ -8,6 +8,10 @@ from typing import Dict, List, Optional, Set
 from src.dao import review_repository
 from src.scraping.archive_scraper import ArchiveScraper
 
+from src.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 from dotenv import load_dotenv
 import os
 load_dotenv()
@@ -28,10 +32,13 @@ class ArchiveScanner:
         """Initialize with archive page URL"""
         self.archive_url: str = archive_url or os.getenv("ARCHIVE_URL", "")
         self.archive_scraper: ArchiveScraper =  ArchiveScraper(self.archive_url)
+        logger.info(f"ArchiveScanner initialized for: {self.archive_url}")
         
     async def get_new_reviews(self) -> Set[str]:
+        logger.info("Getting new review URLs")
         reviews_dict: Dict[str, Set[str]] =  self.scan_for_new_reviews()
         new_reviews: Set[str] = reviews_dict.get("new_reviews")
+        logger.info(f"Found {len(new_reviews)} new review(s)")
         return new_reviews
         
         
@@ -46,15 +53,24 @@ class ArchiveScanner:
                 'total_count': int
             }
         """
-        new_reviews: Set[str] = None
-        existing_reviews: Set[str] = None
-        
+        # Get all URLs from archive
+        logger.info("Starting archive scan for new reviews")
         archive_urls: Set[str] = self.archive_scraper.get_listing_urls()
-        archive_urls_dict: Dict[str, bool] = self._check_reviews_in_db(archive_urls)
-        # TO-DO: either I can make a query in the database to get a set with all existing reviews
-        # or I can check every url from the archive through the database by passing to the review repo
+        logger.info(f"Found {len(archive_urls)} review URLs in archive")
         
+        # Check which ones exist in database
+        logger.debug("Checking which reviews exist in database")
+        existing_db_urls: Set[str] = await self._check_reviews_in_db(archive_urls)
+        logger.info(f"Found {len(existing_db_urls)} existing reviews in database")
+        
+        
+        # Calculate new vs existing
+        new_reviews: Set[str] = archive_urls - existing_db_urls
+        existing_reviews: Set[str] = archive_urls & existing_db_urls
+        
+        logger.info(f"Scan complete: {len(new_reviews)} new, {len(existing_reviews)} existing")
         total_count = len(archive_urls)
+        
         return {
             'new_reviews': new_reviews,
             'existing_reviews': existing_reviews,
@@ -62,9 +78,7 @@ class ArchiveScanner:
             }
     
     
-    async def get_review_by_criteria(self, 
-                                     review_id: Optional[int] = None,
-                                     month: Optional[str] = None) -> Optional[str]:
+    async def get_review_by_criteria(self, review_id: Optional[int] = None, month: Optional[str] = None) -> Optional[str]:
         """
         Find review URL by ID or month.
         First checks DB, if not found checks archive.
@@ -76,22 +90,37 @@ class ArchiveScanner:
         Returns:
             Review URL if found, None otherwise
         """
+        logger.info(f"Looking for review by criteria: review_id={review_id}, month={month}")
         
-        # TO-DO, do I really need this method? Because it looks like a database operation!
-        pass
+        # First check database
+        if review_id:
+            review = await review_repository.get_by_id(review_id)
+            if review:
+                logger.info(f"Found review in database: {review.source_url}")
+                return review.source_url
+        
+        # If not in DB, search archive
+        # This would require extending ArchiveScraper to get review metadata
+        # For now, return None - implement later if needed
+        logger.warning("Review not found in database, archive search not yet implemented")
+        return None
     
-    async def _check_reviews_in_db(self, archive_urls: Set[str]) -> Dict[str, bool]:
+    async def _check_reviews_in_db(self, archive_urls: Set[str]) -> Set[str]:
         """
-        Check which review URLs exist in database.
+        Check which review URLs exist in database using BULK query (efficient).
         
+        Args:
+            archive_urls: Set of URLs from archive
+            
         Returns:
-            {url: exists_in_db, ...}
+            Set of URLs that exist in database
         """
-        database_review_urls: Set[str] = None
-        # TO-DO: either I can make a query in the database to get a set with all existing reviews
-        # or I can check every url from the archive through the database by passing to the review repo
+        logger.debug(f"Checking {len(archive_urls)} URLs against database")
         
+        database_review_urls: Set[str] = await review_repository.get_all_source_urls()
         
-        archive_urls_dict: Dict[str, bool] = None
-    
-        return archive_urls_dict
+        # Find intersection - which archive URLs exist in DB
+        existing_urls = archive_urls & database_review_urls
+        
+        logger.debug(f"Found {len(existing_urls)} URLs already in database")
+        return existing_urls
