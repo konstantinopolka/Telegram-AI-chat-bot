@@ -23,7 +23,8 @@ class TelegraphManager:
     _initialized: bool = False
     _lock: asyncio.Lock = None
     
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
+        """Create singleton instance, accepting but ignoring init arguments."""
         if cls._instance is None:
             logger.info("Creating new TelegraphManager singleton instance")
             cls._instance = super().__new__(cls)

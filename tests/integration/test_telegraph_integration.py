@@ -111,7 +111,7 @@ class TestTelegraphIntegration:
         )
         
         # Create Telegraph article
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         
         # Assertions
         assert urls is not None
@@ -131,7 +131,7 @@ class TestTelegraphIntegration:
         )
         
         # Create Telegraph article
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         
         # Assertions
         assert urls is not None
@@ -153,7 +153,7 @@ class TestTelegraphIntegration:
         )
         
         # Create Telegraph article
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         
         # Assertions
         assert urls is not None
@@ -174,7 +174,7 @@ class TestTelegraphIntegration:
         )
         
         # Create Telegraph article
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         
         # Assertions
         assert urls is not None
@@ -204,7 +204,7 @@ class TestTelegraphIntegration:
         )
         
         # Create Telegraph article
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         
         # Assertions
         assert urls is not None
@@ -262,7 +262,7 @@ def test_function():
         )
         
         # Create Telegraph article
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         
         # Assertions
         assert urls is not None
@@ -287,7 +287,7 @@ def test_function():
             original_url="https://test.example.com/size-estimation"
         )
         
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         actual_chunks = len(urls)
         
         # Assertions
@@ -380,7 +380,7 @@ def section_{num}_function():
             original_url="https://test.example.com/nav-test-multi-parts"
         )
         
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         
         # Should have multiple parts
         assert len(urls) >= 2
@@ -413,7 +413,7 @@ def section_{num}_function():
             original_url="https://test.example.com/custom-title-nav"
         )
         
-        urls = await telegraph_manager.create_article(article)
+        urls = await telegraph_manager.create_telegraph_articles(article)
         
         assert len(urls) >= 2
         

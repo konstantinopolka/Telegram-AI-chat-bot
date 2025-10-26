@@ -3,10 +3,13 @@ from unittest.mock import Mock, patch
 from bs4 import BeautifulSoup
 
 from src.scraping.parser import Parser
+from src.scraping.listing_parser import ListingParser
+from src.scraping.content_parser import ContentParser
 from src.scraping.review_parser import ReviewParser
 
 @pytest.fixture
 def parser():
+    """Basic parser instance for testing Parser base class methods"""
     return ReviewParser("https://platypus1917.org/platypus-review/")
 
 class TestParser:
@@ -118,18 +121,17 @@ class TestParser:
 
 
 class TestParserAbstractMethods:
-    """Test that Parser is properly abstract and methods raise NotImplementedError"""
+    """Test that Parser is properly abstract"""
     
-    def test_cannot_instantiate_abstract_parser(self):
-        """Test that Parser cannot be instantiated directly"""
+    def test_cannot_instantiate_abstract_content_parser(self):
+        """Test that ContentParser cannot be instantiated directly"""
         with pytest.raises(TypeError):
-            Parser("https://example.com")
+            ContentParser()
     
-    def test_abstract_methods_exist(self):
-        """Test that all abstract methods are defined"""
+    def test_content_parser_abstract_methods_exist(self):
+        """Test that all abstract methods are defined in ContentParser"""
         # Check that abstract methods are defined in the class
         abstract_methods = {
-            'parse_listing_page',
             'parse_content_page', 
             'extract_title',
             'extract_content',
@@ -137,8 +139,8 @@ class TestParserAbstractMethods:
             'clean_content_for_publishing'
         }
         
-        # Get all abstract methods from the Parser class
-        parser_abstracts = set(Parser.__abstractmethods__)
+        # Get all abstract methods from the ContentParser class
+        parser_abstracts = set(ContentParser.__abstractmethods__)
         
         # Verify all expected methods are abstract
         assert abstract_methods.issubset(parser_abstracts)

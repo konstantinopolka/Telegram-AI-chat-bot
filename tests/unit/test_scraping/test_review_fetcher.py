@@ -65,6 +65,8 @@ class TestFetcherDetailed:
         """Test fetch_page with HTTP error"""
         # Mock HTTP error response
         mock_response = Mock()
+        mock_response.text = "Error page content"
+        mock_response.status_code = 404
         mock_response.raise_for_status.side_effect = requests.HTTPError("404 Not Found")
         mock_get.return_value = mock_response
         

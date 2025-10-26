@@ -58,7 +58,8 @@ class TestReviewScraper:
         
         result = review_scraper.get_listing_urls()
         
-        mock_fetch.assert_called_once_with(review_scraper.base_url)
+        # fetch_page is called without arguments (uses base_url)
+        mock_fetch.assert_called_once_with()
         mock_parse.assert_called_once_with(mock_html)
         assert result == expected_urls
     
@@ -86,7 +87,8 @@ class TestReviewScraper:
             
             result = review_scraper.get_review_id()
             
-            mock_fetch.assert_called_once_with(review_scraper.base_url)
+            # fetch_page is called without arguments (uses base_url)
+            mock_fetch.assert_called_once_with()
             mock_extract.assert_called_once_with(mock_html)
             assert result == 173
     
@@ -398,52 +400,36 @@ class TestReviewScraperValidation:
 class TestReviewScraperUtilityMethods:
     """Test ReviewScraper utility methods"""
     
-    def test_preview_content_summary_success(self, simple_scraper):
-        """Test successful content preview"""
-        mock_urls = [f"https://example.com/article{i}/" for i in range(1, 8)]
+    def test_validate_content_data_success(self, simple_scraper):
+        """Test successful content validation"""
+        valid_data = {
+            'title': 'A Valid Title That Is Long Enough',
+            'content': '<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. ' * 10 + '</p>',
+            'original_url': 'https://example.com/article'
+        }
         
-        with patch.object(simple_scraper, 'get_listing_urls') as mock_get_urls:
-            mock_get_urls.return_value = mock_urls
-            
-            result = simple_scraper.preview_content_summary()
-            
-            expected = {
-                'base_url': 'https://example.com',
-                'total_articles': 7,
-                'article_urls': mock_urls[:5],
-                'has_more': True
-            }
-            assert result == expected
+        result = simple_scraper.validate_content_data(valid_data)
+        assert result is True
     
-    def test_preview_content_summary_few_articles(self, simple_scraper):
-        """Test content preview with few articles"""
-        mock_urls = ["https://example.com/article1/", "https://example.com/article2/"]
+    def test_validate_content_data_short_title(self, simple_scraper):
+        """Test content validation with short title"""
+        invalid_data = {
+            'title': 'Short',
+            'content': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. ' * 10
+        }
         
-        with patch.object(simple_scraper, 'get_listing_urls') as mock_get_urls:
-            mock_get_urls.return_value = mock_urls
-            
-            result = simple_scraper.preview_content_summary()
-            
-            expected = {
-                'base_url': 'https://example.com',
-                'total_articles': 2,
-                'article_urls': mock_urls,
-                'has_more': False
-            }
-            assert result == expected
+        result = simple_scraper.validate_content_data(invalid_data)
+        assert result is False
     
-    def test_preview_content_summary_error(self, simple_scraper):
-        """Test content preview error handling"""
-        with patch.object(simple_scraper, 'get_listing_urls') as mock_get_urls, \
-             patch.object(simple_scraper, 'handle_scraping_error') as mock_error:
-            
-            error = Exception("Preview error")
-            mock_get_urls.side_effect = error
-            
-            result = simple_scraper.preview_content_summary()
-            
-            assert 'error' in result
-            mock_error.assert_called_once_with(error, "preview content summary")
+    def test_validate_content_data_short_content(self, simple_scraper):
+        """Test content validation with short content"""
+        invalid_data = {
+            'title': 'A Valid Title That Is Long Enough',
+            'content': 'Too short'
+        }
+        
+        result = simple_scraper.validate_content_data(invalid_data)
+        assert result is False
 
 
 class TestReviewScraperAbstractMethodImplementation:

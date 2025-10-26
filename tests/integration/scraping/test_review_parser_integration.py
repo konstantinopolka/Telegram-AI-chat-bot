@@ -69,17 +69,21 @@ class TestReviewParserIntegration:
         assert "main content of the article discussing Marxism" in result["content"]
         assert result["original_url"] == url
         assert result["authors"] == ["John Doe", "Jane Smith"]
-        assert result["publication_date"] == "February 2025"
+        # publication_date is now extracted from URL as a date object
+        from datetime import date
+        assert result["publication_date"] == date(2025, 1, 1)
         # Note: review_id is extracted separately via extract_review_id method
 
     def test_extract_metadata_integration(self):
         """Integration test: extract_metadata returns correct dict from real HTML"""
         soup = BeautifulSoup(self.CONTENT_HTML, "html.parser")
-        metadata = self.parser.extract_metadata(soup)
+        url = "https://platypus1917.org/2025/01/01/marxism-left-today/"
+        metadata = self.parser.extract_metadata(soup, url)
 
+        from datetime import date
         expected_metadata = {
-            "authors": ["John Doe", "Jane Smith"],
-            "publication_date": "February 2025"
+            'authors': ['John Doe', 'Jane Smith'],
+            'publication_date': date(2025, 1, 1)
         }
         assert metadata == expected_metadata
 
@@ -136,11 +140,14 @@ class TestReviewParserEdgeCasesIntegration:
         </html>
         """
 
-        result = self.parser.parse_content_page(html_without_wrapper, "test-url")
+        url = "https://platypus1917.org/2025/01/15/article-without-wrapper"
+        result = self.parser.parse_content_page(html_without_wrapper, url)
 
         assert result["title"] == "Article Without Wrapper"
         assert "not wrapped in bpf-content" in result["content"]
         assert result["authors"] == []  # No authors since no bpf-content wrapper
+        from datetime import date
+        assert result["publication_date"] == date(2025, 1, 15)  # Extracted from URL
         # Note: review_id is extracted separately via extract_review_id method
 
     def test_authors_with_different_formats_integration(self):
@@ -179,20 +186,24 @@ class TestReviewParserEdgeCasesIntegration:
 
     def test_date_extraction_variants_integration(self):
         """Integration test: date extraction with different formats"""
+        from datetime import date as date_obj
         date_variants = [
-            # Single month
-            ('<p class="has-text-align-right">Platypus Review 180 | March 2025</p>', "March 2025"),
-            # Multiple months with em dash
-            ('<p class="has-text-align-right">Platypus Review 181 | July–August 2025</p>', "July–August 2025"),
-            # Fallback to time element
-            ('<time datetime="2025-05-01">May 1, 2025</time>', "2025-05-01"),
+            # Single month - extracts from URL
+            ('<p class="has-text-align-right">Platypus Review 180 | March 2025</p>', 
+             "https://example.com/2025/03/01/article", date_obj(2025, 3, 1)),
+            # Multiple months with em dash - uses first month
+            ('<p class="has-text-align-right">Platypus Review 181 | July–August 2025</p>', 
+             "https://example.com/2025/07/01/article", date_obj(2025, 7, 1)),
+            # Fallback to URL when HTML doesn't have proper format
+            ('<time datetime="2025-05-01">May 1, 2025</time>', 
+             "https://example.com/2025/05/15/article", date_obj(2025, 5, 15)),
         ]
         
-        for html_snippet, expected_date in date_variants:
+        for html_snippet, url, expected_date in date_variants:
             html = f'<div class="bpf-content">{html_snippet}</div>'
             soup = BeautifulSoup(html, "html.parser")
-            date = self.parser._extract_date(soup)
-            assert date == expected_date
+            extracted_date = self.parser._extract_date(soup, url)
+            assert extracted_date == expected_date
 
     def test_review_id_extraction_variants_integration(self):
         """Integration test: review ID extraction with span.selected format"""
@@ -343,7 +354,9 @@ class TestReviewParserComplexContentIntegration:
         
         # Verify metadata extraction
         assert result["authors"] == ["Desmund Hui", "Griffith Jones"]
-        assert result["publication_date"] == "March–April 2025"
+        # publication_date is now a date object extracted from URL
+        from datetime import date
+        assert result["publication_date"] == date(2025, 3, 15)
         # Note: review_id is extracted separately via extract_review_id method
         assert result["original_url"] == url
 
@@ -368,6 +381,8 @@ class TestReviewParserComplexContentIntegration:
         assert result["title"] == "Brief Article"
         assert "Short content." in result["content"]
         assert result["authors"] == ["Anonymous"]
-        assert result["publication_date"] == "May 2025"
+        # publication_date is extracted from URL as date object
+        from datetime import date
+        assert result["publication_date"] == date(2025, 5, 1)
         # Note: review_id is extracted separately via extract_review_id method
         assert result["original_url"] == url
