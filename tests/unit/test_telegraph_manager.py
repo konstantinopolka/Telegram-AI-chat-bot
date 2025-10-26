@@ -9,6 +9,14 @@ from bs4 import BeautifulSoup
 from src.telegraph_manager import TelegraphManager
 
 
+@pytest.fixture(autouse=True)
+def reset_telegraph_singleton():
+    """Reset TelegraphManager singleton before each test."""
+    TelegraphManager.reset_instance()
+    yield
+    TelegraphManager.reset_instance()
+
+
 class TestTelegraphManager:
     
     @patch.dict(os.environ, {
