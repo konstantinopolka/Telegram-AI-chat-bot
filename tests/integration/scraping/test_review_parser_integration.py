@@ -69,17 +69,21 @@ class TestReviewParserIntegration:
         assert "main content of the article discussing Marxism" in result["content"]
         assert result["original_url"] == url
         assert result["authors"] == ["John Doe", "Jane Smith"]
-        assert result["publication_date"] == "February 2025"
+        # publication_date is now extracted from URL as a date object
+        from datetime import date
+        assert result["publication_date"] == date(2025, 1, 1)
         # Note: review_id is extracted separately via extract_review_id method
 
     def test_extract_metadata_integration(self):
         """Integration test: extract_metadata returns correct dict from real HTML"""
         soup = BeautifulSoup(self.CONTENT_HTML, "html.parser")
-        metadata = self.parser.extract_metadata(soup)
+        url = "https://platypus1917.org/2025/01/01/marxism-left-today/"
+        metadata = self.parser.extract_metadata(soup, url)
 
+        from datetime import date
         expected_metadata = {
-            "authors": ["John Doe", "Jane Smith"],
-            "publication_date": "February 2025"
+            'authors': ['John Doe', 'Jane Smith'],
+            'publication_date': date(2025, 1, 1)
         }
         assert metadata == expected_metadata
 
