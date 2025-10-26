@@ -1,9 +1,6 @@
 #standard libraries
 from typing import List, Optional
-
-
 from src.scraping.parser import Parser
-
 
 class ListingParser(Parser):
     def __init__(self, base_url: str, link_selectors: List[str]):

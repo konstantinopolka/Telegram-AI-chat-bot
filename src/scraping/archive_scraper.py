@@ -10,7 +10,10 @@ from src.scraping.fetcher import Fetcher
 from src.scraping.fetcher import Fetcher
 from src.scraping.archive_parser import ArchiveParser
 
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class ArchiveScraper():
     """
@@ -23,6 +26,12 @@ class ArchiveScraper():
     def __init__(self, archive_url: str) :
         self.archive_url = archive_url
         self.fetcher: Fetcher = Fetcher(archive_url)
+        
+        # Load selectors from environment
+        selectors_str = os.getenv('ARCHIVE_LINK_SELECTORS', '')
+        selectors = [s.strip() for s in selectors_str.split(',') if s.strip()]
+        
+        
         self.parser: ArchiveParser = ArchiveParser()
         """Initialize with archive page URL"""
         
@@ -37,8 +46,7 @@ class ArchiveScraper():
         4. Return list of review URLs
         """
         
-        archive_html: str = self.fetcher.fetch_page()
-        # TO-DO: make a list of urls to a set to make sure there are no duplicates  
-        archive_urls: Set[str] = self.parser.parse_archive_page(archive_html)
-        return archive_urls
+        archive_html = self.fetcher.fetch_page()
+        archive_urls = self.parser.parse_archive_page(archive_html)
+        return set(archive_urls)  # Convert to set to remove duplicates
         
