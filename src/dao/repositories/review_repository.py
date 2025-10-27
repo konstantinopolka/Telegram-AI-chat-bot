@@ -64,13 +64,17 @@ class ReviewRepository(BaseRepository[Review]):
             Set of source URLs (e.g., {'https://...', 'https://...'})
         """
         logger.debug("Fetching all review source URLs from database")
-        async with self.session() as session:
-            result = await session.execute(
-                select(Review.source_url)
-            )
-            urls = {row[0] for row in result.all()}
-            logger.info(f"Found {len(urls)} existing review URLs in database")
-            return urls
+        try:
+            async with self.db.get_async_session() as session:
+                result = await session.execute(
+                    select(Review.source_url)
+                )
+                urls = {row[0] for row in result.all()}
+                logger.info(f"Found {len(urls)} existing review URLs in database")
+                return urls
+        except Exception as e:
+            logger.error(f"Failed to fetch review source URLs: {e}", exc_info=True)
+            raise
     
     async def get_with_articles(self, review_id: int) -> Optional[Review]:
         """

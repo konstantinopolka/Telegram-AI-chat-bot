@@ -101,7 +101,7 @@ class ArchiveScanner:
         
         # If not in DB, search archive
         # This would require extending ArchiveScraper to get review metadata
-        # For now, return None - implement later if needed
+        # TO-DO: For now, return None - implement later if needed
         logger.warning("Review not found in database, archive search not yet implemented")
         return None
     
