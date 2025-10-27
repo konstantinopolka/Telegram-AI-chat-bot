@@ -5,6 +5,7 @@
 This test suite validates that `ArchiveScanner` correctly works with the **real Platypus Review archive** at https://platypus1917.org/platypus-review/
 
 Unlike the unit tests (which use mocks), these tests:
+
 - ✅ Make **real HTTP requests** to the Platypus archive
 - ✅ Parse **real HTML** content
 - ✅ Check against **real database** records
@@ -17,22 +18,26 @@ Unlike the unit tests (which use mocks), these tests:
 Contains 4 integration tests:
 
 ### 1. `test_archive_scanner_with_real_archive()`
+
 - Scans the real Platypus archive page
 - Categorizes reviews as new vs existing
 - Verifies data structure and URL formats
 - Most comprehensive test
 
 ### 2. `test_get_new_reviews_convenience_method()`
+
 - Tests `get_new_reviews()` - the method called by `RepostingOrchestrator`
 - Ensures it returns the correct Set[str] of URLs
 - Validates URL formatting
 
 ### 3. `test_database_query_performance()`
+
 - Measures performance of the bulk database query
 - Ensures scan completes in < 10 seconds
 - Validates efficient O(1) lookup approach
 
 ### 4. `test_archive_scanner_output_format()`
+
 - Verifies output format matches what `RepostingOrchestrator` expects
 - Checks type safety (Set[str])
 - Validates all URLs are absolute
@@ -47,6 +52,7 @@ Contains 4 integration tests:
 ```
 
 The script offers two modes:
+
 1. **pytest mode** - Standard pytest output, CI-friendly
 2. **standalone mode** - Detailed output, saves JSON results
 
@@ -67,6 +73,7 @@ python tests/test_archive_scanner_real.py
 ```
 
 This mode:
+
 - Provides detailed console output
 - Shows progress for each test
 - Saves results to `tests/archive_scanner_test_results.json`
@@ -75,6 +82,7 @@ This mode:
 ## What Gets Tested
 
 ### Real HTTP Request
+
 ```python
 scanner = ArchiveScanner(ARCHIVE_URL)
 result = await scanner.scan_for_new_reviews()
@@ -85,6 +93,7 @@ result = await scanner.scan_for_new_reviews()
 - Extracts review URLs using CSS selectors
 
 ### Database Integration
+
 ```python
 new_reviews = await scanner.get_new_reviews()
 ```
@@ -94,6 +103,7 @@ new_reviews = await scanner.get_new_reviews()
 - Returns only new URLs (as Set[str])
 
 ### RepostingOrchestrator Workflow
+
 ```python
 # This is what RepostingOrchestrator.scan_and_process_new_reviews() does:
 new_reviews_urls: Set[str] = await self.archive_scanner.get_new_reviews()
@@ -188,6 +198,7 @@ Archive Statistics:
 ### Required Environment Variables
 
 Set in `.env`:
+
 ```bash
 ARCHIVE_URL=https://platypus1917.org/platypus-review/
 ARCHIVE_LINK_SELECTORS=h2 > a[href^="https://platypus1917.org/category/pr/issue-"]
@@ -232,6 +243,7 @@ pytest tests/test_archive_scanner_real.py::TestArchiveScannerReal::test_archive_
 ```
 
 Look for:
+
 - HTTP errors (404, 500)
 - CSS selector mismatches
 - URL format changes
@@ -249,14 +261,17 @@ Should complete in < 10 seconds even with 150+ reviews.
 ## Comparison with Other Tests
 
 ### vs Unit Tests (`tests/unit/test_archive_scanner.py`)
+
 - ❌ Unit tests: Use mocks, no real HTTP/DB
 - ✅ **This test: Uses real archive + real database**
 
 ### vs System Tests (`tests/integration/system/test_archive_system_integration.py`)
+
 - ❌ System tests: Mock the entire workflow end-to-end
 - ✅ **This test: Real HTTP + Real DB, no ReviewOrchestrator processing**
 
 ### vs Bulk Review Processing (`test_bulk_review_processing.py`)
+
 - ❌ Bulk tests: Process reviews through Telegraph API
 - ✅ **This test: Only scan archive, don't process reviews**
 
@@ -265,12 +280,14 @@ Should complete in < 10 seconds even with 150+ reviews.
 After these tests pass, you can:
 
 1. **Run `RepostingOrchestrator`** to process new reviews:
+
    ```python
    orchestrator = RepostingOrchestrator()
    await orchestrator.scan_and_process_new_reviews()
    ```
 
 2. **Set up scheduled scanning** (hourly/daily):
+
    ```python
    # Using APScheduler or cron
    scheduler.add_job(scan_and_process_new_reviews, 'interval', hours=1)
@@ -288,21 +305,25 @@ After these tests pass, you can:
 ## Troubleshooting
 
 ### Test Fails with "Connection Error"
+
 - Check internet connection
 - Verify https://platypus1917.org/platypus-review/ is accessible
 - Check firewall/proxy settings
 
 ### Test Fails with "No reviews found"
+
 - Verify `ARCHIVE_LINK_SELECTORS` in `.env` matches current HTML structure
 - Check if Platypus changed their archive page layout
 - Run with `-s` flag to see detailed parsing output
 
 ### Test Fails with "Database Error"
+
 - Ensure database is running
 - Run Alembic migrations: `alembic upgrade head`
 - Check database connection settings in `.env`
 
 ### All Reviews Marked as "Existing"
+
 - This is normal if you've already processed all archive reviews
 - Clear database to see "new" reviews, or wait for new issues to be published
 
