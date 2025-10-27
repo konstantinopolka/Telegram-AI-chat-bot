@@ -84,9 +84,10 @@ Telegram-AI-chat-bot/
 │   │       └── versions/                # Migration scripts
 │   └── scraping/                        # Web scraping modules
 │       ├── scraper.py                   # Abstract scraper base class
-│       ├── fetcher.py                   # HTTP fetcher for web requests
+│       ├── fetcher.py                   # Abstract HTTP fetcher base class
 │       ├── parser.py                    # Abstract HTML parser base class
 │       ├── review_scraper.py            # Concrete review scraper implementation
+│       ├── review_fetcher.py            # Concrete HTTP fetcher for reviews
 │       ├── review_parser.py             # Concrete HTML parser for reviews
 │       └── constants.py                 # Scraping constants
 ├── tests/                               # Test suite
@@ -121,10 +122,6 @@ The bot follows a layered architecture with clear separation of concerns:
 - **Bot Handler Layer**: `BotHandler` and `HandlerRegistry` manage Telegram interactions
 - **Orchestration Layer**: `ReviewOrchestrator` coordinates the complete workflow
 - **Scraping Layer**: Abstract base classes (`Scraper`, `Fetcher`, `Parser`) with concrete implementations for extensibility
-=======
-- **Orchestration Layer**: `ReviewOrchestrator` coordinates the complete workflow
-- **Scraping Layer**: Abstract base classes (`Scraper`, `Parser`) with concrete implementations (`ReviewScraper`, `Fetcher`, `ReviewParser`) for extensibility
->>>>>>> Stashed changes
 - **Telegraph Layer**: `TelegraphManager` handles article publishing with automatic content splitting
 - **Data Layer**: SQLModel models with Alembic migrations for schema management
 - **Database Layer**: Singleton `DatabaseManager` for connection management
@@ -423,10 +420,6 @@ logging.basicConfig(
 
 - **Singleton**: `DatabaseManager` and `TelegraphManager` ensure single instances with optional dependency injection
 - **Abstract Factory**: Scraping module (`Scraper`, `Fetcher`, `Parser`) for extensibility
-=======
-- **Singleton**: `DatabaseManager` and `TelegraphManager` ensure single instances with optional dependency injection
-- **Abstract Factory**: Scraping module (`Scraper`, `Parser`) for extensibility with concrete implementations
->>>>>>> Stashed changes
 - **Decorator**: `HandlerRegistry` wraps handlers with automatic logging
 - **Orchestrator**: `ReviewOrchestrator` coordinates complex multi-step workflows
 - **Repository**: `DatabaseManager` abstracts database operations

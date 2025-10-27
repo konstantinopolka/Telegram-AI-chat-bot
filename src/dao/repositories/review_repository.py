@@ -1,4 +1,4 @@
-from typing import Optional, List, override
+from typing import Optional, List, override, Set
 from sqlmodel import select
 from sqlalchemy.orm import selectinload
 
@@ -55,6 +55,22 @@ class ReviewRepository(BaseRepository[Review]):
         except Exception as e:
             logger.error(f"Failed to fetch review by URL {url}: {e}", exc_info=True)
             raise
+    async def get_all_source_urls(self) -> Set[str]:
+        """
+        Get all review source URLs from database.
+        Optimized for checking which reviews already exist.
+        
+        Returns:
+            Set of source URLs (e.g., {'https://...', 'https://...'})
+        """
+        logger.debug("Fetching all review source URLs from database")
+        async with self.session() as session:
+            result = await session.execute(
+                select(Review.source_url)
+            )
+            urls = {row[0] for row in result.all()}
+            logger.info(f"Found {len(urls)} existing review URLs in database")
+            return urls
     
     async def get_with_articles(self, review_id: int) -> Optional[Review]:
         """

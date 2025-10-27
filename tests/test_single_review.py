@@ -20,7 +20,7 @@ from datetime import date
 # Local imports
 from src.scraping.review_scraper import ReviewScraper
 from src.telegraph_manager import TelegraphManager
-from src.reposting_orchestrator import ReviewOrchestrator
+from src.review_orchestrator import ReviewOrchestrator
 from src.dao.models import Review
 from src.dao.repositories.review_repository import review_repository
 from src.dao.core.database_manager import db_manager

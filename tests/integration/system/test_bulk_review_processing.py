@@ -16,7 +16,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from src.scraping.review_scraper import ReviewScraper
-from src.reposting_orchestrator import ReviewOrchestrator
+from src.review_orchestrator import ReviewOrchestrator
 from src.telegraph_manager import TelegraphManager
 from src.scraping.parser import Parser
 
