@@ -22,11 +22,11 @@ class UserRepository(BaseRepository[User]):
         For reviews, the natural key is the review ID itself -
         it comes from the source (issue number) and defines uniqueness.
         """
-        if obj.id is None:
+        if obj.telegram_id is None:
             logger.warning("Cannot check natural key for Review without ID")
             return None
         
-        return await self.get_by_telegram_id(obj.id)
+        return await self.get_by_telegram_id(obj.telegram_id)
     
     async def get_by_telegram_id(self, telegram_id: int) -> Optional[User]:
         """

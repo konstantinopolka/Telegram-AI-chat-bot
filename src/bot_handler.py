@@ -29,7 +29,7 @@ class BotHandler:
         logger.info("Creating AsyncTeleBot instance")
         
         # Create the bot instance
-        self.bot = AsyncTeleBot(TOKEN)
+        self.bot: AsyncTeleBot = AsyncTeleBot(TOKEN)
         logger.debug("AsyncTeleBot instance created")
         self.handler_registry: HandlerRegistry = None
        
@@ -108,17 +108,5 @@ class BotHandler:
     async def list_articles(self, user_id: int):
         """
         Show user list of all articles with read/unread status
-        """
-        pass
-
-    async def read_article(self, user_id: int, article_id: int):
-        """
-        Show content of a single article, resume from last read position
-        """
-        pass
-
-    async def mark_progress(self, user_id: int, article_id: int, position: int):
-        """
-        Save progress for user in the DB
         """
         pass

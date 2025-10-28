@@ -1,6 +1,8 @@
 import json
 from src.dao.models import User
-from src.dao import AsyncSessionLocal
+from src.dao.repositories.user_repository import user_repository
+from telebot.async_telebot import AsyncTeleBot
+
 from src.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -21,7 +23,7 @@ class HandlerRegistry:
             bot: The AsyncTeleBot instance
             passed_logger: Optional logger instance (deprecated, uses module logger)
         """
-        self.bot = bot
+        self.bot : AsyncTeleBot = bot
         
         # Create the logged message handler decorator
         self.logged_message_handler = self._create_logged_message_handler()
@@ -86,45 +88,29 @@ class HandlerRegistry:
         async def send_welcome(message):
             logger.info(f"Welcome command received from user_id={message.from_user.id}")
             try:
-                logger.debug("Opening async database session")
-                async with AsyncSessionLocal() as session:
-                    logger.debug(f"Querying database for user: {message.from_user.id}")
-                    user = await session.get(User, message.from_user.id)
+                user: User = await user_repository.get_by_telegram_id(message.from_user.id)
+                
+                if not user:
+                    user = User(
+                        telegram_id=message.from_user.id,
+                        username=message.from_user.username,
+                        first_name=message.from_user.first_name,
+                        last_name=getattr(message.from_user, 'last_name', None),
+                        phone=None
+                    )
+                    user = await user_repository.save(user)
+                    await self.bot.reply_to(message, "Welcome, you have been registered!")
+                else:
+                    username = message.from_user.username or message.from_user.first_name or "User"
+                    await self.bot.reply_to(message, f"Welcome back, {username}")
+                    logger.debug("Welcome back message sent")
                     
-                    if not user:
-                       await self.__save_user(message=message, session=session)
-                    else:
-                        logger.info(f"Returning user: {user.username or user.first_name} (ID: {user.telegram_id})")
-                        username = message.from_user.username or message.from_user.first_name or "User"
-                        await self.bot.reply_to(message, f"Welcome back, {username}")
-                        logger.debug("Welcome back message sent")
             except Exception as e:
                 logger.error(f"Error in send_welcome handler: {e}", exc_info=True)
                 try:
                     await self.bot.reply_to(message, "Sorry, something went wrong. Please try again.")
                 except Exception as reply_error:
                     logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
-    
-    async def __save_user(self, message, session: AsyncSession):
-        logger.info(f"New user detected: {message.from_user.id}")
-        logger.debug("Creating new user object")
-        
-        # Safely extract phone number if available
-        phone = getattr(message.from_user, 'phone', None) if hasattr(message, 'from_user') else None
-        
-        user = User(
-                telegram_id=message.from_user.id,
-                username=message.from_user.username,
-                first_name=message.from_user.first_name,
-                last_name=message.from_user.last_name,
-                phone=phone
-        )
-        logger.debug("Adding user to session")
-        logger.debug("Committing new user to database")
-        session.add(user)
-        await session.commit()
-        await self.bot.reply_to(message, "Welcome, you have been registered!")
-        logger.info(f"New user registered: {user.username or user.first_name} (ID: {user.telegram_id})")
     
     def _register_rules_handler(self):
         """Register rules command handler"""
