@@ -35,13 +35,25 @@ async def main():
     logger.info("=" * 60)
     
     try:
-        # Initialize and start bot
+        # Initialize bot
         bot_handler = BotHandler()
         logger.info("Bot handler initialized successfully")
         
-        # Start polling
-        logger.info("Starting bot polling...")
-        await bot_handler.start_polling()
+        # Create background task for polling
+        polling_task = asyncio.create_task(bot_handler.start_polling())
+        logger.info("Polling task created")
+        
+        # Wait a bit for bot to initialize
+        await asyncio.sleep(2)
+        
+        # Now do your broadcast
+        message = "penis detrov"
+        logger.info("Broadcasting test message...")
+        await bot_handler.broadcast_message(message=message)
+        
+        # Keep polling running
+        logger.info("Continuing to listen for messages...")
+        await polling_task  # This will run forever
         
     except KeyboardInterrupt:
         logger.info("Bot stopped by user (Ctrl+C)")

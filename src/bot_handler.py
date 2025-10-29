@@ -113,34 +113,67 @@ class BotHandler:
         await self.bot.polling(none_stop=True)
     async def broadcast_message(self, message: str):
         """Send a message to all users"""
-        logger.info(f"Broadcasting message={message} to all users")
-        users: List[User] = await user_repository.get_all()
+        logger.info("=" * 60)
+        logger.info("Starting broadcast_message")
+        logger.info(f"Message to broadcast: '{message[:100]}{'...' if len(message) > 100 else ''}'")
         
-        if not users:
-            logger.warning("No user to broadcast to")
+        # Fetch all users
+        logger.debug("Fetching all users from database")
+        try:
+            users: List[User] = await user_repository.get_all()
+            logger.info(f"Retrieved {len(users) if users else 0} users from database")
+        except Exception as e:
+            logger.error(f"Failed to fetch users from database: {e}", exc_info=True)
             return
         
+        if not users:
+            logger.warning("No users to broadcast to - aborting broadcast")
+            return
+        
+        # Log user details
+        logger.debug("Users to broadcast to:")
+        for idx, user in enumerate(users, 1):
+            logger.debug(f"  {idx}. User(id={user.telegram_id}, telegram_id={user.telegram_id}, username={getattr(user, 'username', 'N/A')})")
+        
+        # Create tasks for all users
+        logger.info(f"Creating {len(users)} send tasks")
         tasks = []
         
         for user in users:
+            logger.debug(f"Creating task for user telegram_id={user.telegram_id}")
             task = self.bot.send_message(user.telegram_id, message, parse_mode='HTML')
             tasks.append(task)
-        results: List[Any | Exception] = await asyncio.gather(*tasks, return_exceptions=True)
         
-        async def __analyze_gather_results(self, results: List[Any | Exception], users: List[Any]):
-             # Track success/failure
+        logger.info(f"Created {len(tasks)} tasks, executing concurrently with asyncio.gather()")
+        
+        # Execute all sends concurrently
+        try:
+            results: List[Any | Exception] = await asyncio.gather(*tasks, return_exceptions=True)
+            logger.info(f"asyncio.gather() completed, received {len(results)} results")
+        except Exception as e:
+            logger.error(f"Unexpected error during asyncio.gather(): {e}", exc_info=True)
+            return
+        
+        # Analyze results
+        async def __analyze_gather_results(results: List[Any | Exception], users: List[User]):
+            """Analyze the results of broadcast and log success/failure"""
+            logger.debug("Analyzing gather results")
+            
+            # Track success/failure
             success_count = 0
             failure_count = 0
             
             for user, result in zip(users, results):
                 if isinstance(result, Exception):
-                    logger.error(f"Failed to send to user {user.telegram_id}: {result}")
+                    logger.error(f"❌ Failed to send to user {user.telegram_id} (username={getattr(user, 'username', 'N/A')}): {result}", exc_info=True)
                     failure_count += 1
                 else:
-                    logger.debug(f"Successfully sent to user {user.telegram_id}")
+                    logger.debug(f"✓ Successfully sent to user {user.telegram_id} (username={getattr(user, 'username', 'N/A')})")
                     success_count += 1
             
+            logger.info("=" * 60)
             logger.info(f"Broadcast complete: {success_count} succeeded, {failure_count} failed")
+            logger.info("=" * 60)
         
         await __analyze_gather_results(results, users)
         
