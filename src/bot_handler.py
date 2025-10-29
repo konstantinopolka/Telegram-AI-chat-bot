@@ -1,9 +1,16 @@
 import os
 import json
 from dotenv import load_dotenv
+from typing import List, Any
+
 from telebot.async_telebot import AsyncTeleBot
+
+
 from src.handler_registry import HandlerRegistry
 from src.logging_config import get_logger
+from src.dao.repositories import user_repository
+from src.dao.models import User
+import asyncio
 
 """
 Bot handler class with object-oriented design
@@ -104,6 +111,38 @@ class BotHandler:
         logger.info("Starting bot polling loop")
         logger.info("Bot is now listening for messages...")
         await self.bot.polling(none_stop=True)
+    async def broadcast_message(self, message: str):
+        """Send a message to all users"""
+        logger.info(f"Broadcasting message={message} to all users")
+        users: List[User] = await user_repository.get_all()
+        
+        if not users:
+            logger.warning("No user to broadcast to")
+            return
+        
+        tasks = []
+        
+        for user in users:
+            task = self.bot.send_message(user.telegram_id, message, parse_mode='HTML')
+            tasks.append(task)
+        results: List[Any | Exception] = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        async def __analyze_gather_results(self, results: List[Any | Exception], users: List[Any]):
+             # Track success/failure
+            success_count = 0
+            failure_count = 0
+            
+            for user, result in zip(users, results):
+                if isinstance(result, Exception):
+                    logger.error(f"Failed to send to user {user.telegram_id}: {result}")
+                    failure_count += 1
+                else:
+                    logger.debug(f"Successfully sent to user {user.telegram_id}")
+                    success_count += 1
+            
+            logger.info(f"Broadcast complete: {success_count} succeeded, {failure_count} failed")
+        
+        await __analyze_gather_results(results, users)
         
     async def list_articles(self, user_id: int):
         """
