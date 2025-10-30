@@ -63,6 +63,8 @@ class BotHandler:
 
         async def logged_reply_to(message, text, **kwargs):
             """Wrapper for reply_to that logs the response"""
+            
+            # modification of reply_to -> belongs to MessageService
             logger.debug(f"Sending reply to chat_id={message.chat.id}")
             try:
                 result = await original_reply_to(message, text, **kwargs)
@@ -111,7 +113,7 @@ class BotHandler:
         logger.info("Starting bot polling loop")
         logger.info("Bot is now listening for messages...")
         await self.bot.polling(none_stop=True)
-    async def broadcast_message(self, message: str):
+    async def broadcast_message(self, message: str, formatting_function: Optional[Callable[[str], str]] = None, parse_mode: str = 'HTML'):
         """Send a message to all users"""
         logger.info("=" * 60)
         logger.info("Starting broadcast_message")
@@ -126,6 +128,8 @@ class BotHandler:
             logger.error(f"Failed to fetch users from database: {e}", exc_info=True)
             return
         
+        
+        
         if not users:
             logger.warning("No users to broadcast to - aborting broadcast")
             return
@@ -135,13 +139,19 @@ class BotHandler:
         for idx, user in enumerate(users, 1):
             logger.debug(f"  {idx}. User(id={user.telegram_id}, telegram_id={user.telegram_id}, username={getattr(user, 'username', 'N/A')})")
         
+        
+        # Apply formatting function if provided
+        formatted_message = formatting_function(message) if formatting_function else message
+        
+        if formatting_function:
+            logger.debug(f"Applied formatting function: {formatting_function.__name__ if hasattr(formatting_function, '__name__') else 'lambda'}")
         # Create tasks for all users
         logger.info(f"Creating {len(users)} send tasks")
         tasks = []
         
         for user in users:
             logger.debug(f"Creating task for user telegram_id={user.telegram_id}")
-            task = self.bot.send_message(user.telegram_id, message, parse_mode='HTML')
+            task = self.user_send_message(user_id=user.telegram_id, message=formatted_message, formatting_function=None, parse_mode=parse_mode)
             tasks.append(task)
         
         logger.info(f"Created {len(tasks)} tasks, executing concurrently with asyncio.gather()")
@@ -177,7 +187,7 @@ class BotHandler:
         
         await __analyze_gather_results(results, users)
         
-    async def user_send_message(self, user_id: int, message: str, formatting_function: Optional[Callable[[str], str]] = None, parse_mode: str = 'HTML')
+    async def user_send_message(self, user_id: int, message: str, formatting_function: Optional[Callable[[str], str]] = None, parse_mode: str = 'HTML'):
         """
         Send a message to a specific user with optional formatting.
         

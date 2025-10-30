@@ -26,6 +26,7 @@ logger = get_logger(__name__)
 
 
 from src.bot_handler import BotHandler
+from src.bot_orchestrator import BotOrchestrator
 from src.version import __version__
 
 async def main():
@@ -36,20 +37,20 @@ async def main():
     
     try:
         # Initialize bot
-        bot_handler = BotHandler()
+        bot_orchestrator = BotOrchestrator()
         logger.info("Bot handler initialized successfully")
         
         # Create background task for polling
-        polling_task = asyncio.create_task(bot_handler.start_polling())
+        polling_task = asyncio.create_task(bot_orchestrator.start())
         logger.info("Polling task created")
         
         # Wait a bit for bot to initialize
         await asyncio.sleep(2)
         
-        # # Now do your broadcast
-        # message = "penis detrov"
-        # logger.info("Broadcasting test message...")
-        # await bot_handler.broadcast_message(message=message)
+        # Now do your broadcast
+        message = "penis detrov"
+        logger.info("Broadcasting test message...")
+        await bot_orchestrator.broadcast_message(message=message)
         
         # Keep polling running
         logger.info("Continuing to listen for messages...")
