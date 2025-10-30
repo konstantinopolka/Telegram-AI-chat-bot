@@ -25,7 +25,6 @@ def setup_logging_from_env():
 logger = get_logger(__name__)
 
 
-from src.bot_handler import BotHandler
 from src.bot_orchestrator import BotOrchestrator
 from src.version import __version__
 

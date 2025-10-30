@@ -2,7 +2,8 @@ from src.archive_scanner import ArchiveScanner
 from src.review_orchestrator import ReviewOrchestrator
 from src.dao.models import Review
 from typing import Set, Tuple
-from src.bot_handler import BotHandler
+from src.bot_orchestrator import BotOrchestrator
+
 
 class RepostingOrchestrator:
     
@@ -14,7 +15,7 @@ class RepostingOrchestrator:
     
     def __init__(self):
         self.archive_scanner: ArchiveScanner = ArchiveScanner()
-        self.bot_handler: BotHandler = BotHandler()
+        self.bot_orchestrator: BotOrchestrator = BotOrchestrator()
         self.review_orchestrator: ReviewOrchestrator = None
         
         
@@ -31,6 +32,6 @@ class RepostingOrchestrator:
     
     
     async def start_telegram_bot(self): 
-        self.bot_handler.start_polling()
+        self.bot_orchestrator.start()
     
     
