@@ -46,10 +46,10 @@ async def main():
         # Wait a bit for bot to initialize
         await asyncio.sleep(2)
         
-        # Now do your broadcast
-        message = "penis detrov"
-        logger.info("Broadcasting test message...")
-        await bot_handler.broadcast_message(message=message)
+        # # Now do your broadcast
+        # message = "penis detrov"
+        # logger.info("Broadcasting test message...")
+        # await bot_handler.broadcast_message(message=message)
         
         # Keep polling running
         logger.info("Continuing to listen for messages...")

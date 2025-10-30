@@ -1,7 +1,7 @@
 import os
 import json
 from dotenv import load_dotenv
-from typing import List, Any
+from typing import List, Any, Callable, Optional
 
 from telebot.async_telebot import AsyncTeleBot
 
@@ -176,6 +176,41 @@ class BotHandler:
             logger.info("=" * 60)
         
         await __analyze_gather_results(results, users)
+        
+    async def user_send_message(self, user_id: int, message: str, formatting_function: Optional[Callable[[str], str]] = None, parse_mode: str = 'HTML')
+        """
+        Send a message to a specific user with optional formatting.
+        
+        Args:
+            user_id: Telegram user ID to send message to
+            message: Message text to send
+            formatting_function: Optional function to format the message before sending.
+                            Should accept a string and return a formatted string.
+            parse_mode: Telegram parse mode (default: 'HTML')
+        
+        Returns:
+            The sent message object from Telegram API
+        """
+        
+        logger.info(f"Sending message to user_id={user_id}")
+        logger.debug(f"Message preview: '{message[:100]}{'...' if len(message) > 100 else ''}'")
+        
+        
+        try:
+            # Apply formatting function if provided
+            formatted_message = formatting_function(message) if formatting_function else message
+            
+            if formatting_function:
+                logger.debug(f"Applied formatting function: {formatting_function.__name__ if hasattr(formatting_function, '__name__') else 'lambda'}")
+            
+            # Send the message
+            result = await self.bot.send_message(user_id, formatted_message, parse_mode=parse_mode)
+            logger.info(f"✓ Message sent successfully to user_id={user_id}")
+            return result
+        
+        except Exception as e:
+            logger.error(f"❌ Failed to send message to user_id={user_id}: {e}", exc_info=True)
+            raise
         
     async def list_articles(self, user_id: int):
         """
