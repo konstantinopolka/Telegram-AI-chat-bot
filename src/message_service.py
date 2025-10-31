@@ -271,3 +271,45 @@ class MessageService:
                 await self.send_message(user_id=chat_id, message="Sorry, failed to load review details.")
             except Exception as fallback_error:
                 logger.error(f"Failed to send fallback message: {fallback_error}", exc_info=True)
+                
+    async def broadcast_review(self, review: Review):
+        """
+        Broadcast a review to all users.
+        
+        Args:
+            review: Review object containing articles with Telegraph URLs
+        """
+        logger.info("=" * 60)
+        logger.info(f"Starting broadcast_review for review ID={review.id}")
+        logger.debug(f"Review details: source_url={review.source_url}, articles_count={len(review.articles) if review.articles else 0}")
+        
+        try:
+            # Validate review has articles
+            if not review.articles or len(review.articles) == 0:
+                logger.warning(f"Review ID={review.id} has no articles - aborting broadcast")
+                return
+            
+            logger.debug(f"Review has {len(review.articles)} articles")
+            
+            # Format review message using Review's __str__ method
+            logger.debug("Formatting review message using Review.__str__()")
+            try:
+                review_message = str(review)  # Fixed: was str(Review) - the class instead of instance
+                logger.info(f"Review message formatted successfully, length: {len(review_message)} chars")
+                logger.debug(f"Message preview: {review_message[:200]}{'...' if len(review_message) > 200 else ''}")
+            except Exception as e:
+                logger.error(f"Failed to format review message: {e}", exc_info=True)
+                raise
+            
+            # Broadcast the formatted message
+            logger.info(f"Broadcasting review ID={review.id} to all users")
+            await self.broadcast_message(review_message)
+            
+            logger.info(f"✓ Successfully completed broadcast_review for review ID={review.id}")
+            logger.info("=" * 60)
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to broadcast review ID={review.id}: {e}", exc_info=True)
+            logger.info("=" * 60)
+            raise
+        
