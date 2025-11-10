@@ -49,7 +49,7 @@ async def main():
         # Now do your broadcast
         message = "penis detrov"
         logger.info("Broadcasting test message...")
-        await bot_orchestrator.broadcast_message(message=message)
+        # await bot_orchestrator.broadcast_message(message=message)
         
         # Keep polling running
         logger.info("Continuing to listen for messages...")

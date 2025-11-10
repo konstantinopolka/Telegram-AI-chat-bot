@@ -47,7 +47,7 @@ src/dao/
 ┌─────────────────────┐
 │   User              │
 │─────────────────────│
-│ telegram_id (PK)    │
+│ id (PK)    │
 │ username            │
 │ first_name          │
 │ last_name           │
@@ -78,7 +78,7 @@ Stores Telegram user information.
 
 | Column        | Type        | Description                 |
 | ------------- | ----------- | --------------------------- |
-| telegram_id   | BIGINT (PK) | Telegram user ID            |
+| id            | BIGINT (PK) | Telegram user ID            |
 | username      | VARCHAR(50) | Telegram username           |
 | first_name    | VARCHAR(50) | User's first name           |
 | last_name     | VARCHAR(50) | User's last name (nullable) |
@@ -124,7 +124,7 @@ from datetime import datetime, timezone
 class User(SQLModel, table=True):
     __tablename__ = "reposting_bot_users"
 
-    telegram_id: int = Field(default=None, primary_key=True)
+    id: int = Field(default=None, primary_key=True)
     username: str = Field(max_length=50)
     first_name: str = Field(max_length=50)
     last_name: Optional[str] = Field(max_length=50)
@@ -271,11 +271,11 @@ Use `AsyncSessionLocal` for async operations (required for bot handlers):
 from src.dao import AsyncSessionLocal
 from src.dao.models import User, Article, Review
 
-async def save_user(telegram_id: int, username: str, first_name: str):
+async def save_user(id: int, username: str, first_name: str):
     """Save a new user to the database"""
     async with AsyncSessionLocal() as session:
         user = User(
-            telegram_id=telegram_id,
+            id=id,
             username=username,
             first_name=first_name
         )
@@ -284,10 +284,10 @@ async def save_user(telegram_id: int, username: str, first_name: str):
         await session.refresh(user)
         return user
 
-async def get_user(telegram_id: int):
+async def get_user(id: int):
     """Retrieve a user from the database"""
     async with AsyncSessionLocal() as session:
-        user = await session.get(User, telegram_id)
+        user = await session.get(User, id)
         return user
 
 async def get_all_articles():
@@ -332,7 +332,7 @@ async def send_welcome(message):
             if not user:
                 # Create new user
                 user = User(
-                    telegram_id=message.from_user.id,
+                    id=message.from_user.id,
                     username=message.from_user.username,
                     first_name=message.from_user.first_name
                 )
@@ -432,7 +432,7 @@ Edit a model in `src/dao/models/`:
 class User(SQLModel, table=True):
     __tablename__ = "reposting_bot_users"
 
-    telegram_id: int = Field(default=None, primary_key=True)
+    id: int = Field(default=None, primary_key=True)
     username: str = Field(max_length=50)
     first_name: str = Field(max_length=50)
     last_name: Optional[str] = Field(max_length=50)
@@ -801,7 +801,7 @@ async def view_all_data():
         users = (await session.execute(select(User))).scalars().all()
         print(f"Users: {len(users)}")
         for user in users:
-            print(f"  {user.telegram_id}: {user.username}")
+            print(f"  {user.id}: {user.username}")
 
         # View reviews
         reviews = (await session.execute(select(Review))).scalars().all()

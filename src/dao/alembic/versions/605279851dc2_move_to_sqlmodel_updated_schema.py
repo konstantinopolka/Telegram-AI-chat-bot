@@ -29,7 +29,7 @@ def upgrade() -> None:
                existing_nullable=False)
 
     with op.batch_alter_table('reposting_bot_users', schema=None) as batch_op:
-        batch_op.alter_column('telegram_id',
+        batch_op.alter_column('id',
                existing_type=sa.BIGINT(),
                type_=sa.Integer(),
                existing_nullable=False,
@@ -60,7 +60,7 @@ def downgrade() -> None:
         batch_op.alter_column('username',
                existing_type=sa.VARCHAR(length=50),
                nullable=True)
-        batch_op.alter_column('telegram_id',
+        batch_op.alter_column('id',
                existing_type=sa.Integer(),
                type_=sa.BIGINT(),
                existing_nullable=False,

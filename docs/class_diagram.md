@@ -185,7 +185,7 @@ classDiagram
     %% ========================================
     class User {
         <<SQLModel>>
-        +telegram_id: int [PK]
+        +id: int [PK]
         +username: str
         +first_name: str
         +last_name: str
@@ -303,6 +303,7 @@ classDiagram
 - **ChannelPoster**: Posts articles to Telegram channels
 
 ### Orchestration Layer
+
 - **ReviewOrchestrator**: Orchestrates the full workflow: scraping → Telegraph → database → posting
 
 ### Scraping Layer
@@ -336,6 +337,7 @@ classDiagram
 ## Data Flow
 
 <<<<<<< Updated upstream
+
 1. **Scraping Flow**: ReviewScraper → ReviewFetcher → ReviewParser → Raw Data
 2. **Processing Flow**: ReviewOrchestrator → TelegraphManager → Article with URLs
 3. **Storage Flow**: Article/Review → DatabaseManager → Database

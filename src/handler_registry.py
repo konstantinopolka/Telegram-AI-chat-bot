@@ -84,6 +84,8 @@ class HandlerRegistry:
         self._register_rules_handler()
         logger.debug("Registering review-reposting handler")
         self._register_review_handler()
+        logger.debug("Registerting review-broadcasting handler")
+        
         logger.debug("Registering echo handler (must be last - catches all messages)")
         self._register_echo_handler()
         
@@ -97,11 +99,11 @@ class HandlerRegistry:
         async def send_welcome(message):
             logger.info(f"Welcome command received from user_id={message.from_user.id}")
             try:
-                user: User = await user_repository.get_by_telegram_id(message.from_user.id)
+                user: User = await user_repository.get_by_id(message.from_user.id)
                 
                 if not user:
                     user = User(
-                        telegram_id=message.from_user.id,
+                        id=message.from_user.id,
                         username=message.from_user.username,
                         first_name=message.from_user.first_name,
                         last_name=getattr(message.from_user, 'last_name', None),
@@ -179,6 +181,51 @@ class HandlerRegistry:
                     await self.bot.reply_to(message, "Sorry, something went wrong. Please try again.")
                 except Exception as reply_error:
                     logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
+    def _register_broadcasting_handler(self):
+        "Register handler for broadcasting reviews"
+        
+        @self.logged_message_handler(commands=['broadcast'] )
+        async def broadcast_review(message):
+            # Check if user is admin
+            user: User = await user_repository.get_by_id(message.from_user.id)
+            if not user or not user.is_admin:
+                await self.bot.reply_to(message, "⛔ Admin only")
+                return
+
+            # Parse: /review 153 or /review July
+            parts = message.text.split(maxsplit=1)
+            if len(parts) < 2:
+                await self.bot.reply_to(message, "Usage: /review <id or month>")
+                return
+            
+            query = parts[1]
+            review = None
+            
+            # Try numeric ID first
+            if query.isdigit():
+                review_id = int(query)
+                logger.debug(f"Looking up review by ID: {review_id}")
+                review: Review = await review_repository.get_with_articles(review_id)
+            else:
+                # Search by month/keyword
+                # TO-DO: add searching by months and years
+                pass
+            
+            if not review:
+                await self.bot.reply_to(message, f"Review #{review_id} not found")
+                return
+            
+            
+            # Confirm before broadcasting
+            markup = InlineKeyboardMarkup()
+            markup.add(
+                InlineKeyboardButton("✅ Confirm", callback_data=f"confirm_broadcast_{review_id}"),
+                InlineKeyboardButton("❌ Cancel", callback_data="cancel_broadcast")
+            )
+            
+            review_message = str(review)
+            await self.bot.reply_to(message, f"{review_message}\n\nBroadcast to all users?", reply_markup=markup)
+            
     
     def _register_echo_handler(self):
         """Register echo message handler"""
@@ -203,13 +250,40 @@ class HandlerRegistry:
                     await self.bot.reply_to(message, "Sorry, something went wrong. Please try again.")
                 except Exception as reply_error:
                     logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
-    
-    def add_custom_handler(self, decorator_kwargs, handler_func):
-        """
-        Utility method to add custom handlers dynamically
+                    
+def __register_setadmin_handler(self):
+        # In handler_registry.py
+    @self.logged_message_handler(commands=['setadmin'])
+    async def set_admin_command(message):
+        # Check if requester is admin
+        requester = await user_repository.get_by_id(message.from_user.id)
+        if not requester or not requester.is_admin:
+            await self.bot.reply_to(message, "⛔ Admin only")
+            return
         
-        Args:
-            decorator_kwargs: Arguments for the logged_message_handler decorator
-            handler_func: The async handler function
-        """
-        return self.logged_message_handler(**decorator_kwargs)(handler_func)
+        # Parse username or user_id
+        parts = message.text.split(maxsplit=1)
+        if len(parts) < 2:
+            await self.bot.reply_to(message, "Usage: /setadmin @username or /setadmin <id>")
+            return
+        
+        target_identifier = parts[1]
+        
+        # Handle @username or id
+        target_user = None
+        if target_identifier.startswith('@'):
+            username = target_identifier[1:]
+            target_user = await user_repository.get_by_username(username)
+        elif target_identifier.isdigit():
+            target_user = await user_repository.get_by_id(int(target_identifier))
+        
+        if not target_user:
+            await self.bot.reply_to(message, f"User not found: {target_identifier}")
+            return
+        
+        # Grant admin rights
+        target_user.is_admin = True
+        await user_repository.save(target_user)
+        
+        await self.bot.reply_to(message, f"✅ Admin rights granted to {target_user.username or target_user.first_name}")
+        

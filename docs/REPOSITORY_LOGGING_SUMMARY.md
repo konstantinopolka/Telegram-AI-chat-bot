@@ -31,10 +31,10 @@ Added comprehensive logging to all 4 repository files with **150+ log statements
 **What's logged**:
 
 - Initialization + singleton creation
-- Get by telegram_id (with username if found)
+- Get by id (with username if found)
 - Get by username
 - Get all admins (with count)
-- Create user (with all details: username, telegram_id, admin status)
+- Create user (with all details: username, id, admin status)
 - Update admin status (before/after)
 - All exceptions with context
 
@@ -88,9 +88,9 @@ ERROR   (~10 statements)  - All failures with exc_info=True
 DEBUG - Initialized BaseRepository for model: User
 INFO  - UserRepository initialized
 INFO  - UserRepository singleton instance created
-DEBUG - Fetching user by telegram_id: 123456789
-DEBUG - No user found with telegram_id: 123456789
-INFO  - Creating new user: @john_doe (telegram_id=123456789, admin=True)
+DEBUG - Fetching user by id: 123456789
+DEBUG - No user found with id: 123456789
+INFO  - Creating new user: @john_doe (id=123456789, admin=True)
 DEBUG - Creating new User record
 INFO  - Created User with ID: 42
 INFO  - Successfully created user: @john_doe with ID: 42

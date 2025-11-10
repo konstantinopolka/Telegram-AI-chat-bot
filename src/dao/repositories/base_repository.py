@@ -109,12 +109,16 @@ class BaseRepository(ABC, Generic[ModelType]):
                 if not existing:
                     logger.error(f"{self.model.__name__} with ID {obj_id} not found")
                     raise ValueError(f"{self.model.__name__} with ID {obj_id} not found")
-                    
-                session.add(obj)
+                
+                # Copy all non-primary-key attributes from obj to existing
+                for column in self.model.__table__.columns:
+                    if not column.primary_key:
+                        setattr(existing, column.name, getattr(obj, column.name))
+                
                 await session.commit()
-                await session.refresh(obj)
+                await session.refresh(existing)
                 logger.info(f"Updated {self.model.__name__} with ID: {obj_id}")
-                return obj
+                return existing
         except Exception as e:
             logger.error(f"Failed to update {self.model.__name__} with ID {obj_id}: {e}", exc_info=True)
             raise
@@ -152,7 +156,7 @@ class BaseRepository(ABC, Generic[ModelType]):
         Examples:
         - Article: same original_url
         - Review: same id (business ID from source)
-        - User: same telegram_id
+        - User: same id
         
         Args:
             obj: Model instance with natural key fields populated

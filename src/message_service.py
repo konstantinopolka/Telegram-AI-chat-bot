@@ -121,7 +121,7 @@ class MessageService:
         logger.debug("Users to broadcast to:")
         for idx, user in enumerate(users, 1):
             logger.debug(
-                f"  {idx}. User(id={user.telegram_id}, telegram_id={user.telegram_id}, "
+                f"  {idx}. User(id={user.id}, id={user.id}, "
                 f"username={getattr(user, 'username', 'N/A')})"
             )
         
@@ -140,10 +140,10 @@ class MessageService:
         tasks = []
         
         for user in users:
-            logger.debug(f"Creating task for user telegram_id={user.telegram_id}")
+            logger.debug(f"Creating task for user id={user.id}")
             # Pass pre-formatted message, no formatter (already applied)
             task = self.send_message(
-                user_id=user.telegram_id,
+                user_id=user.id,
                 message=formatted_message,
                 formatting_function=None,  # Don't format again
                 parse_mode=parse_mode
@@ -180,14 +180,14 @@ class MessageService:
         for user, result in zip(users, results):
             if isinstance(result, Exception):
                 logger.error(
-                    f"❌ Failed to send to user {user.telegram_id} "
+                    f"❌ Failed to send to user {user.id} "
                     f"(username={getattr(user, 'username', 'N/A')}): {result}",
                     exc_info=True
                 )
                 failure_count += 1
             else:
                 logger.debug(
-                    f"✓ Successfully sent to user {user.telegram_id} "
+                    f"✓ Successfully sent to user {user.id} "
                     f"(username={getattr(user, 'username', 'N/A')})"
                 )
                 success_count += 1

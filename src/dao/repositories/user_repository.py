@@ -22,36 +22,36 @@ class UserRepository(BaseRepository[User]):
         For reviews, the natural key is the review ID itself -
         it comes from the source (issue number) and defines uniqueness.
         """
-        if obj.telegram_id is None:
+        if obj.id is None:
             logger.warning("Cannot check natural key for Review without ID")
             return None
         
-        return await self.get_by_telegram_id(obj.telegram_id)
+        return await self.get_by_id(obj.id)
     
-    async def get_by_telegram_id(self, telegram_id: int) -> Optional[User]:
+    async def get_by_id(self, id: int) -> Optional[User]:
         """
         Get user by Telegram ID.
         
         Args:
-            telegram_id: User's Telegram ID
+            id: User's Telegram ID
             
         Returns:
             User instance or None
         """
-        logger.debug(f"Fetching user by telegram_id: {telegram_id}")
+        logger.debug(f"Fetching user by id: {id}")
         try:
             async with self.db.get_async_session() as session:
                 result = await session.execute(
-                    select(User).where(User.telegram_id == telegram_id)
+                    select(User).where(User.id == id)
                 )
                 user = result.scalar_one_or_none()
                 if user:
-                    logger.debug(f"Found user: {user.username} (telegram_id={telegram_id})")
+                    logger.debug(f"Found user: {user.username} (id={id})")
                 else:
-                    logger.debug(f"No user found with telegram_id: {telegram_id}")
+                    logger.debug(f"No user found with id: {id}")
                 return user
         except Exception as e:
-            logger.error(f"Failed to fetch user by telegram_id {telegram_id}: {e}", exc_info=True)
+            logger.error(f"Failed to fetch user by id {id}: {e}", exc_info=True)
             raise
     
     async def get_by_username(self, username: str) -> Optional[User]:
@@ -102,7 +102,7 @@ class UserRepository(BaseRepository[User]):
     
     async def save_user(
         self,
-        telegram_id: int,
+        id: int,
         username: str,
         first_name: str,
         last_name: Optional[str] = None,
@@ -113,7 +113,7 @@ class UserRepository(BaseRepository[User]):
         Create a new user.
         
         Args:
-            telegram_id: Telegram user ID
+            id: Telegram user ID
             username: Telegram username
             first_name: User's first name
             last_name: User's last name (optional)
@@ -123,10 +123,10 @@ class UserRepository(BaseRepository[User]):
         Returns:
             Created User instance
         """
-        logger.info(f"Creating new user: {username} (telegram_id={telegram_id}, admin={is_admin})")
+        logger.info(f"Creating new user: {username} (id={id}, admin={is_admin})")
         try:
             user = User(
-                telegram_id=telegram_id,
+                id=id,
                 username=username,
                 first_name=first_name,
                 last_name=last_name,
@@ -140,29 +140,29 @@ class UserRepository(BaseRepository[User]):
             logger.error(f"Failed to create user {username}: {e}", exc_info=True)
             raise
     
-    async def update_admin_status(self, telegram_id: int, is_admin: bool) -> Optional[User]:
+    async def update_admin_status(self, id: int, is_admin: bool) -> Optional[User]:
         """
         Update user's admin status.
         
         Args:
-            telegram_id: User's Telegram ID
+            id: User's Telegram ID
             is_admin: New admin status
             
         Returns:
             Updated User or None if not found
         """
-        logger.info(f"Updating admin status for telegram_id {telegram_id} to: {is_admin}")
+        logger.info(f"Updating admin status for id {id} to: {is_admin}")
         try:
-            user = await self.get_by_telegram_id(telegram_id)
+            user = await self.get_by_id(id)
             if user:
                 user.is_admin = is_admin
                 updated_user = await self.update(user)
                 logger.info(f"Updated admin status for user {user.username} to: {is_admin}")
                 return updated_user
-            logger.warning(f"Cannot update admin status - user not found: telegram_id={telegram_id}")
+            logger.warning(f"Cannot update admin status - user not found: id={id}")
             return None
         except Exception as e:
-            logger.error(f"Failed to update admin status for telegram_id {telegram_id}: {e}", exc_info=True)
+            logger.error(f"Failed to update admin status for id {id}: {e}", exc_info=True)
             raise
 
 
