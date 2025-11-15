@@ -4,7 +4,7 @@ import json
 from src.dao.models import User, Review
 from src.dao.repositories import user_repository, review_repository
 from telebot.async_telebot import AsyncTeleBot
-
+from src.config import ADMIN_IDS, ADMIN_NICKNAMES
 
 if TYPE_CHECKING:
     from src.message_service import MessageService
@@ -102,14 +102,28 @@ class HandlerRegistry:
             logger.info(f"Welcome command received from user_id={message.from_user.id}")
             try:
                 user: User = await user_repository.get_by_id(message.from_user.id)
-                
+                       
                 if not user:
+                    username = message.from_user.username
+                    logger.info(f"Checking if the user {username} is eligible for admin rights")
+                    is_admin: bool = (
+                        message.from_user.id in ADMIN_IDS or
+                        username in ADMIN_NICKNAMES
+                    )
+                    
+                    logger.info(f"Default admin ids are: {ADMIN_IDS}")
+                    logger.info(f"default admin's nicknames are:{ADMIN_NICKNAMES}")
+                    
+                    if is_admin:
+                        logger.info(f"Auto-granting admin rights to user {message.from_user.id} ({username})")
+                    
                     user = User(
                         id=message.from_user.id,
                         username=message.from_user.username,
                         first_name=message.from_user.first_name,
                         last_name=getattr(message.from_user, 'last_name', None),
-                        phone=None
+                        phone=None,
+                        is_admin=is_admin
                     )
                     user = await user_repository.save(user)
                     await self.bot.reply_to(message, "Welcome, you have been registered!")
