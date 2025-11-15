@@ -85,6 +85,8 @@ class HandlerRegistry:
         logger.debug("Registering review-reposting handler")
         self._register_review_handler()
         logger.debug("Registerting review-broadcasting handler")
+        self.__register_setadmin_handler()
+        logger.debug("Registering admin-setting handler")
         
         logger.debug("Registering echo handler (must be last - catches all messages)")
         self._register_echo_handler()
@@ -251,39 +253,39 @@ class HandlerRegistry:
                 except Exception as reply_error:
                     logger.error(f"Failed to send error message: {reply_error}", exc_info=True)
                     
-def __register_setadmin_handler(self):
-        # In handler_registry.py
-    @self.logged_message_handler(commands=['setadmin'])
-    async def set_admin_command(message):
-        # Check if requester is admin
-        requester = await user_repository.get_by_id(message.from_user.id)
-        if not requester or not requester.is_admin:
-            await self.bot.reply_to(message, "⛔ Admin only")
-            return
-        
-        # Parse username or user_id
-        parts = message.text.split(maxsplit=1)
-        if len(parts) < 2:
-            await self.bot.reply_to(message, "Usage: /setadmin @username or /setadmin <id>")
-            return
-        
-        target_identifier = parts[1]
-        
-        # Handle @username or id
-        target_user = None
-        if target_identifier.startswith('@'):
-            username = target_identifier[1:]
-            target_user = await user_repository.get_by_username(username)
-        elif target_identifier.isdigit():
-            target_user = await user_repository.get_by_id(int(target_identifier))
-        
-        if not target_user:
-            await self.bot.reply_to(message, f"User not found: {target_identifier}")
-            return
-        
-        # Grant admin rights
-        target_user.is_admin = True
-        await user_repository.save(target_user)
-        
-        await self.bot.reply_to(message, f"✅ Admin rights granted to {target_user.username or target_user.first_name}")
-        
+    def __register_setadmin_handler(self):
+            # In handler_registry.py
+        @self.logged_message_handler(commands=['setadmin'])
+        async def set_admin_command(message):
+            # Check if requester is admin
+            requester = await user_repository.get_by_id(message.from_user.id)
+            if not requester or not requester.is_admin:
+                await self.bot.reply_to(message, "⛔ Admin only")
+                return
+            
+            # Parse username or user_id
+            parts = message.text.split(maxsplit=1)
+            if len(parts) < 2:
+                await self.bot.reply_to(message, "Usage: /setadmin @username or /setadmin <id>")
+                return
+            
+            target_identifier = parts[1]
+            
+            # Handle @username or id
+            target_user = None
+            if target_identifier.startswith('@'):
+                username = target_identifier[1:]
+                target_user = await user_repository.get_by_username(username)
+            elif target_identifier.isdigit():
+                target_user = await user_repository.get_by_id(int(target_identifier))
+            
+            if not target_user:
+                await self.bot.reply_to(message, f"User not found: {target_identifier}")
+                return
+            
+            # Grant admin rights
+            target_user.is_admin = True
+            await user_repository.update(target_user)
+            
+            await self.bot.reply_to(message, f"✅ Admin rights granted to {target_user.username or target_user.first_name}")
+            
